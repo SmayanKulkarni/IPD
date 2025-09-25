@@ -2,14 +2,13 @@ import os
 import numpy as np
 from tqdm import tqdm
 from badminton_utils import extract_3d_landmarks_from_video
-from config import CROP_CONFIG # <-- IMPORT THE CONFIG
+from config import CROP_CONFIG 
 
 if __name__ == "__main__":
     
     DATA_PATH = "/home/smayan/Desktop/IPD/Data" 
 
     print("--- MODE: Preprocessing videos to .npy landmark files ---")
-    print(f"--- Using Crop Settings: {CROP_CONFIG} ---")
     
     shot_types = [d for d in os.listdir(DATA_PATH) if os.path.isdir(os.path.join(DATA_PATH, d))]
     
@@ -26,8 +25,20 @@ if __name__ == "__main__":
             if os.path.exists(output_file_path):
                 continue
 
-            # Pass the imported config to the function
-            landmarks = extract_3d_landmarks_from_video(video_file_path, crop_config=CROP_CONFIG)
+            filename = os.path.basename(video_file)
+            filename_without_ext = os.path.splitext(filename)[0]
+
+            active_crop_config = None
+            if filename_without_ext.isdigit():
+                print(f"Applying crop to {filename}")
+                active_crop_config = CROP_CONFIG
+
+            landmarks = extract_3d_landmarks_from_video(
+                video_file_path,
+                crop_config=active_crop_config,
+                min_detection_confidence=0.2,
+                min_tracking_confidence=0.2
+            )
             
             if landmarks is not None and len(landmarks) > 0:
                 np.save(output_file_path, landmarks)
@@ -35,3 +46,4 @@ if __name__ == "__main__":
                 print(f"Warning: No valid landmarks detected in {video_file}. Skipping.")
                 
     print("\nPreprocessing complete.")
+

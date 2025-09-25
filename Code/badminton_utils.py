@@ -11,12 +11,17 @@ from tensorflow.keras.utils import to_categorical
 # PART 1: DATA EXTRACTION AND PREPARATION
 # ==============================================================================
 
-def extract_3d_landmarks_from_video(video_path, crop_config=None, target_width=720):
+def extract_3d_landmarks_from_video(video_path, crop_config=None, target_width=720, min_detection_confidence=0.2, min_tracking_confidence=0.2):
     """
     Crops a video frame based on a config dict and extracts 3D pose landmarks.
     """
     mp_pose = mp.solutions.pose
-    pose = mp_pose.Pose(static_image_mode=False, model_complexity=2, min_detection_confidence=0.5)
+    pose = mp_pose.Pose(
+        static_image_mode=False,
+        model_complexity=2,
+        min_detection_confidence=min_detection_confidence,
+        min_tracking_confidence=min_tracking_confidence
+    )
     
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
@@ -30,7 +35,6 @@ def extract_3d_landmarks_from_video(video_path, crop_config=None, target_width=7
         if not ret:
             break
 
-        # --- 4-SIDED CROP LOGIC ---
         if crop_config:
             h, w, _ = frame.shape
             start_row = int(h * crop_config.get("top", 0.0))
@@ -40,7 +44,6 @@ def extract_3d_landmarks_from_video(video_path, crop_config=None, target_width=7
             frame_cropped = frame[start_row:end_row, start_col:end_col]
         else:
             frame_cropped = frame
-        # --- END CROP ---
 
         h, w, _ = frame_cropped.shape
         if h == 0 or w == 0: continue
@@ -149,3 +152,4 @@ def build_lstm_model(input_shape, num_classes):
         Dense(num_classes, activation='softmax')])
     model.compile(optimizer='Adam', loss='categorical_crossentropy', metrics=['accuracy'])
     return model
+

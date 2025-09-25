@@ -9,12 +9,13 @@ if __name__ == "__main__":
 
     print("--- MODE: Training shot classification model ---")
     
-    print("Loading and preprocessing data...")
     (X_train, X_test, y_train, y_test), label_map = load_and_preprocess_data_for_training(
         DATA_PATH, 
         sequence_length=SEQUENCE_LENGTH
     )
     print(f"Found {len(label_map)} classes: {list(label_map.keys())}")
+    print(f"Training data shape: {X_train.shape}")
+    print(f"Testing data shape: {X_test.shape}")
 
     NUM_CLASSES = len(label_map)
     INPUT_SHAPE = (SEQUENCE_LENGTH, 33 * 3)
@@ -32,3 +33,4 @@ if __name__ == "__main__":
     print(f"\nSaving model as {MODEL_NAME}...")
     model.save(MODEL_NAME)
     print("Model saved successfully.")
+
