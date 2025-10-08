@@ -1,6 +1,6 @@
 # train_model.py
 import numpy as np
-from badminton_utils import load_and_preprocess_data_for_training, build_lstm_model
+from badminton_utils2 import load_and_preprocess_data_for_training, build_lstm_model
 
 if __name__ == "__main__":
     DATA_PATH = "/home/smayan/Desktop/IPD/Data" 
@@ -17,12 +17,12 @@ if __name__ == "__main__":
     else:
         print(f"Found {len(label_map)} classes: {list(label_map.keys())}")
         NUM_CLASSES = len(label_map)
-        INPUT_SHAPE = (SEQUENCE_LENGTH, NUM_FEATURES)
+        input_shape = (X_train.shape[1], X_train.shape[2]) 
         
-        model = build_lstm_model(INPUT_SHAPE, NUM_CLASSES)
+        model = build_lstm_model(input_shape, NUM_CLASSES)
         model.summary()
         
-        model.fit(X_train, y_train, epochs=100, batch_size=32, validation_data=(X_test, y_test))
+        model.fit(X_train, y_train, epochs=100, batch_size=16, validation_data=(X_test, y_test))
         
         model.save(MODEL_NAME)
         print(f"\nModel saved as {MODEL_NAME}")
