@@ -8,9 +8,7 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense, Dropout
 from tensorflow.keras.utils import to_categorical
 
-# ==============================================================================
-# PART 1: DATA EXTRACTION AND FEATURE ENGINEERING
-# ==============================================================================
+
 
 def extract_3d_landmarks_from_video(video_path, crop_config=None, target_width=720, min_detection_confidence=0.2, min_tracking_confidence=0.2):
     """MODIFIED: Now returns both the landmarks and the video's FPS."""
@@ -101,9 +99,7 @@ def extract_comprehensive_features(landmarks_frame):
         left_arm_reach, right_arm_reach, left_leg_extension, right_leg_extension
     ])
 
-# ==============================================================================
-# PART 2: KSI & DTW
-# ==============================================================================
+
 def dynamic_time_warping(seq1, seq2):
     seq1_flat = seq1.reshape(seq1.shape[0], -1)
     seq2_flat = seq2.reshape(seq2.shape[0], -1)
@@ -150,9 +146,7 @@ def calculate_ksi(expert_seq, user_seq, weights={'pose': 0.4, 'velocity': 0.4, '
     ksi_score = (weights['pose'] * s_pose + weights['velocity'] * s_velocity + weights['acceleration'] * s_acceleration)
     return {'ksi_total': ksi_score, 'pose_similarity': s_pose, 'velocity_coherence': s_velocity, 'acceleration_profile': s_acceleration}
 
-# ==============================================================================
-# PART 3: DEEP LEARNING MODEL
-# ==============================================================================
+
 
 def load_and_preprocess_data_for_training(data_path, sequence_length=50):
     """
@@ -174,7 +168,7 @@ def load_and_preprocess_data_for_training(data_path, sequence_length=50):
 
             # --- MODIFIED: Time window changed to 1.5 seconds ---
             SECONDS_TO_CONSIDER = 1.5
-            FRAMES_TO_IGNORE_AT_END = 10
+            FRAMES_TO_IGNORE_AT_END = 2
             # --- END OF CHANGE ---
 
             frames_for_duration = int(SECONDS_TO_CONSIDER * fps)
@@ -208,13 +202,26 @@ def load_and_preprocess_data_for_training(data_path, sequence_length=50):
     y = to_categorical(np.array(labels)).astype(int)
     return train_test_split(X, y, test_size=0.2, random_state=42), label_map
 
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv1D, MaxPooling1D, LSTM, Dropout, Dense
+
 def build_lstm_model(input_shape, num_classes):
     model = Sequential([
-        LSTM(64, return_sequences=True, activation='relu', input_shape=input_shape),
+        # 1️⃣ Convolutional feature extraction
+        Conv1D(filters=64, kernel_size=3, activation='relu', input_shape=input_shape),
+        MaxPooling1D(pool_size=2),
+        Dropout(0.2),
+
+        # 2️⃣ Recurrent feature modeling
+        LSTM(64, return_sequences=True, activation='relu'),
         Dropout(0.2),
         LSTM(128, return_sequences=False, activation='relu'),
         Dropout(0.2),
+
+        # 3️⃣ Fully connected classification head
         Dense(64, activation='relu'),
-        Dense(num_classes, activation='softmax')])
+        Dense(num_classes, activation='softmax')
+    ])
+
     model.compile(optimizer='Adam', loss='categorical_crossentropy', metrics=['accuracy'])
     return model
