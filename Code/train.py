@@ -1,12 +1,12 @@
 import numpy as np
-from badminton_utils import load_and_preprocess_data_for_training, build_lstm_model
+from badminton_utils2 import load_and_preprocess_data_for_training, build_lstm_model
 from tensorflow.keras.callbacks import EarlyStopping
 
 if __name__ == "__main__":
     # --- CONFIGURATION ---
     # Path to the pre-processed .npz files (the output of proprocessing.py)
     DATA_PATH = "/home/smayan/Desktop/IPD/Data"
-    MODEL_NAME = "badminton_shot_classifier_v4_pre_windowed.h5"
+    MODEL_NAME = "reduced_data_badminton_shot_classifier_v5_pre_windowed.h5"
 
     print("--- Loading Pre-Windowed Data for Training ---")
     (X_train, X_test, y_train, y_test), label_map = load_and_preprocess_data_for_training(DATA_PATH)
@@ -27,13 +27,13 @@ if __name__ == "__main__":
         model.summary()
 
         # Optional: Use early stopping to prevent overfitting
-        early_stopping = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
+        early_stopping = EarlyStopping(monitor='val_loss', patience=200, restore_best_weights=True)
 
         print("\n--- Starting Model Training ---")
         model.fit(
             X_train, y_train,
-            epochs=100,
-            batch_size=32,
+            epochs=75,
+            batch_size= 16,
             validation_data=(X_test, y_test),
             callbacks=[early_stopping]
         )

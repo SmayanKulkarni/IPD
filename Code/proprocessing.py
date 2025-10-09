@@ -51,56 +51,64 @@ def extract_3d_landmarks_from_video(video_path, crop_config=None, target_width=7
     return np.array(all_landmarks) if all_landmarks else None, fps
 
 
-def preprocess_videos_with_sliding_window(source_path, target_path, sequence_length, stride, crop_config):
+def preprocess_videos_with_sliding_window(data_path, sequence_length, stride, crop_config):
     """
-    Extracts landmarks and saves them as pre-sliced .npz files using a sliding window.
+    Finds videos in the data_path, extracts landmarks, and saves them
+    as pre-sliced .npz files in the same directory.
     """
-    if not os.path.exists(target_path):
-        os.makedirs(target_path)
-        print(f"Created directory: {target_path}")
+    print(f"Scanning for videos in: {data_path}")
 
-    for shot_type in os.listdir(source_path):
-        shot_source_dir = os.path.join(source_path, shot_type)
-        shot_target_dir = os.path.join(target_path, shot_type)
+    # Iterate over each shot type directory (e.g., 'clear', 'smash')
+    for shot_type in os.listdir(data_path):
+        shot_dir = os.path.join(data_path, shot_type)
 
-        if not os.path.isdir(shot_source_dir): continue
-        if not os.path.exists(shot_target_dir): os.makedirs(shot_target_dir)
+        if not os.path.isdir(shot_dir):
+            continue
 
-        for video_file in os.listdir(shot_source_dir):
-            if not video_file.lower().endswith(('.mp4', '.avi', '.mov')): continue
+        # Process each video file in the directory
+        for file_name in os.listdir(shot_dir):
+            if not file_name.lower().endswith(('.mp4', '.avi', '.mov')):
+                continue
 
-            video_path = os.path.join(shot_source_dir, video_file)
+            video_path = os.path.join(shot_dir, file_name)
             print(f"\nProcessing video: {video_path}")
 
+            # Extract landmarks and FPS from the video
             landmarks, fps = extract_3d_landmarks_from_video(video_path, crop_config=crop_config)
 
             if landmarks is None or len(landmarks) < sequence_length:
-                print(f"  -> Skipped: Not enough frames.")
+                print(f"  -> Skipped: Not enough frames ({len(landmarks) if landmarks is not None else 0})")
                 continue
 
+            # --- SLIDING WINDOW LOGIC ---
             window_count = 0
             for i in range(0, len(landmarks) - sequence_length + 1, stride):
                 window = landmarks[i : i + sequence_length]
-                video_name_base = os.path.splitext(video_file)[0]
+                
+                # Define a unique name for each window file
+                video_name_base = os.path.splitext(file_name)[0]
                 output_filename = f"{video_name_base}_window_{window_count}.npz"
-                output_path = os.path.join(shot_target_dir, output_filename)
+                output_path = os.path.join(shot_dir, output_filename) # Save in the same folder
+                
+                # Save the windowed landmarks and original FPS
                 np.savez(output_path, landmarks=window, fps=fps)
                 window_count += 1
-
+            
             print(f"  -> Success: Saved {window_count} windows.")
 
 if __name__ == "__main__":
     # --- CONFIGURATION ---
-    SOURCE_VIDEO_PATH = "/home/smayan/Desktop/IPD/Raw_Videos"
-    TARGET_NPZ_PATH = "/home/smayan/Desktop/IPD/Data"
+    # This is the single path to your data, containing subfolders for each shot type.
+    DATA_PATH = "/home/smayan/Desktop/IPD/Data"
     SEQUENCE_LENGTH = 50
     STRIDE = 10
-    CROP_CONFIG = {"top": 0.2, "bottom": 0.05, "left": 0.2, "right": 0.2}
+    CROP_CONFIG = {
+    "top": 0.10, "bottom": 0.45, "left": 0.25, "right": 0.25
+}
 
     print("--- Starting Preprocessing with Sliding Window ---")
     preprocess_videos_with_sliding_window(
-        SOURCE_VIDEO_PATH,
-        TARGET_NPZ_PATH,
+        DATA_PATH,
         SEQUENCE_LENGTH,
         STRIDE,
         CROP_CONFIG
