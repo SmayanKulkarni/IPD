@@ -6,7 +6,7 @@ if __name__ == "__main__":
     # --- CONFIGURATION ---
     # Path to the pre-processed .npz files (the output of proprocessing.py)
     DATA_PATH = "/home/smayan/Desktop/IPD/Data"
-    MODEL_NAME = "reduced_data_badminton_shot_classifier_v5_pre_windowed.h5"
+    MODEL_NAME = "2_bigger_window_reduced_data_badminton_shot_classifier_v5.h5"
 
     print("--- Loading Pre-Windowed Data for Training ---")
     (X_train, X_test, y_train, y_test), label_map = load_and_preprocess_data_for_training(DATA_PATH)
@@ -26,17 +26,16 @@ if __name__ == "__main__":
         model = build_lstm_model(INPUT_SHAPE, NUM_CLASSES)
         model.summary()
 
-        # Optional: Use early stopping to prevent overfitting
         early_stopping = EarlyStopping(monitor='val_loss', patience=200, restore_best_weights=True)
 
         print("\n--- Starting Model Training ---")
         model.fit(
             X_train, y_train,
-            epochs=75,
-            batch_size= 16,
+            epochs=45,
+            batch_size= 8,
             validation_data=(X_test, y_test),
             callbacks=[early_stopping]
         )
 
         model.save(MODEL_NAME)
-        print(f"\n✅ Model training complete. Saved as {MODEL_NAME}")
+        print(f"\n Model training complete. Saved as {MODEL_NAME}")

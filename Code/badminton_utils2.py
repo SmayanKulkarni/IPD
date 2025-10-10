@@ -61,13 +61,13 @@ def build_lstm_model(input_shape, num_classes):
     Builds and compiles the Conv1D + LSTM model.
     """
     model = Sequential([
-        Conv1D(filters=64, kernel_size=3, activation='relu', input_shape=input_shape),
-        MaxPooling1D(pool_size=2),
+        Conv1D(filters=128, kernel_size=4, activation='relu', input_shape=input_shape),
+        MaxPooling1D(pool_size=3),
         Dropout(0.2),
-        LSTM(64, return_sequences=True, activation='relu'),
+        LSTM(128, return_sequences=True, activation='relu'),
         Dropout(0.5),
-        LSTM(128, return_sequences=False, activation='relu'),
-        Dropout(0.2),
+        LSTM(64, return_sequences=False, activation='relu'),
+        Dropout(0.4),
         Dense(64, activation='relu'),
         Dense(num_classes, activation='softmax')
     ])

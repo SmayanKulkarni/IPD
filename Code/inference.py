@@ -53,7 +53,7 @@ def get_project_config():
 
     config['DATA_PATH'] = data_path_str
     config['SEQUENCE_LENGTH'] = int(seq_len_str)
-    config['MODEL_NAME'] = model_name_str
+    config['MODEL_NAME'] = "/home/smayan/Desktop/IPD/Code/2_bigger_window_reduced_data_badminton_shot_classifier_v5.h5"
     try:
         config['CROP_CONFIG'] = eval(crop_config_str) # Safely evaluate the dict string
     except:
@@ -122,7 +122,7 @@ def predict_shot_from_video(video_path, model, config):
 
 if __name__ == '__main__':
     # --- CHANGE ONLY THIS LINE ---
-    VIDEO_TO_CLASSIFY = "/home/smayan/Desktop/IPD/Data/backhand_net_shot/033.mp4"
+    VIDEO_TO_CLASSIFY = "/home/smayan/Desktop/IPD/Data/forehand_net_shot/012.mp4"
     
     config = get_project_config()
     

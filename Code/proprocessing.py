@@ -100,8 +100,8 @@ if __name__ == "__main__":
     # --- CONFIGURATION ---
     # This is the single path to your data, containing subfolders for each shot type.
     DATA_PATH = "/home/smayan/Desktop/IPD/Data"
-    SEQUENCE_LENGTH = 50
-    STRIDE = 10
+    SEQUENCE_LENGTH = 40
+    STRIDE = 5
     CROP_CONFIG = {
     "top": 0.10, "bottom": 0.45, "left": 0.25, "right": 0.25
 }
