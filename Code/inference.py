@@ -121,7 +121,6 @@ def predict_shot_from_video(video_path, model, config):
     return config['LABEL_MAP'].get(final_prediction_index, "Unknown Shot")
 
 if __name__ == '__main__':
-    # --- CHANGE ONLY THIS LINE ---
     VIDEO_TO_CLASSIFY = "/home/smayan/Desktop/IPD/Data/forehand_net_shot/012.mp4"
     
     config = get_project_config()
