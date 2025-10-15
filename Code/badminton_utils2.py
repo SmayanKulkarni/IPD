@@ -72,4 +72,4 @@ def build_lstm_model(input_shape, num_classes):
         Dense(num_classes, activation='softmax')
     ])
     model.compile(optimizer='Adam', loss='categorical_crossentropy', metrics=['accuracy'])
-    return model
+    return model    
