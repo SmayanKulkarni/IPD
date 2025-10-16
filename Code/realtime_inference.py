@@ -5,36 +5,25 @@ import tensorflow as tf
 from collections import deque
 import os
 
-# --- Directly import from your utility file ---
-# This ensures the normalization logic is identical to your training pipeline.
+# --- Import from your utility file ---
 try:
-    from badminton_utils import normalize_landmarks
+    from badminton_utils2 import normalize_landmarks
 except ImportError:
-    print("FATAL ERROR: badminton_utils.py not found.")
-    print("Please ensure this script is in the same directory as your utility file.")
+    print("FATAL ERROR: badminton_utils2.py not found.")
     exit()
 
 def get_project_config():
     """
     Reads all necessary configuration from your project files and folder structure.
     """
-    # --- Configuration from: smayankulkarni/.../Code/train.py ---
     DATA_PATH = "/home/smayan/Desktop/IPD/Data"
-    SEQUENCE_LENGTH = 500
-    MODEL_NAME = "badminton_shot_classifier_v3_sliced.h5"
+    # !! This value MUST match the sequence length used for training your model !!
+    SEQUENCE_LENGTH = 40 
+    MODEL_NAME = "2_bigger_window_reduced_data_badminton_shot_classifier_v5.h5"
+    CROP_CONFIG = { "top": 0.10, "bottom": 0.45, "left": 0.25, "right": 0.25 }
 
-    # --- CROP CONFIGURATION ---
-    # This should match the configuration used for preprocessing your training data.
-    # It defines the percentage of the frame to crop from each side.
-    CROP_CONFIG = {
-    "top": 0.10, "bottom": 0.45, "left": 0.25, "right": 0.25
-}
-
-    # --- Automatically generate LABEL_MAP from data folder ---
     try:
         shot_types = sorted([d for d in os.listdir(DATA_PATH) if os.path.isdir(os.path.join(DATA_PATH, d))])
-        if not shot_types:
-            raise FileNotFoundError(f"No subdirectories found in {DATA_PATH}.")
         label_map = {num: label for num, label in enumerate(shot_types)}
         print(f"Successfully generated Label Map: {label_map}")
     except FileNotFoundError as e:
@@ -46,35 +35,43 @@ def get_project_config():
 
 def run_realtime_inference(model, label_map, sequence_length, crop_config):
     """
-    Runs a real-time inference loop with cropping and functions from badminton_utils.
+    Runs real-time inference with settings matched to the batch script for accuracy.
     """
+    PREDICTION_INTERVAL = 10 
+    
     mp_pose = mp.solutions.pose
-    pose = mp_pose.Pose(min_detection_confidence=0.2, min_tracking_confidence=0.2, model_complexity=1)
+    # --- CHANGED: Matched model_complexity to the batch script (2) ---
+    pose = mp_pose.Pose(
+        static_image_mode=False, 
+        model_complexity=2, 
+        min_detection_confidence=0.5, 
+        min_tracking_confidence=0.5
+    )
     mp_drawing = mp.solutions.drawing_utils
-    cap = cv2.VideoCapture("/home/smayan/Desktop/IPD/Data/backhand_net_shot/017.mp4")
+    cap = cv2.VideoCapture("/home/smayan/Desktop/IPD/Data/forehand_net_shot/052.mp4")
 
     if not cap.isOpened():
-        print("Error: Could not open webcam.")
+        print("Error: Could not open video file.")
         return
 
     sequence_buffer = deque(maxlen=sequence_length)
-    current_prediction = "Waiting..."
+    predictions_buffer = deque(maxlen=15) 
+    display_prediction = "Waiting for sequence..."
+    frame_counter = 0
 
     while cap.isOpened():
         ret, frame = cap.read()
-        if not ret: continue
+        if not ret: 
+            print("End of video.")
+            break
 
-        frame = cv2.flip(frame, 1)
+        # --- REMOVED: Do not flip the frame, it mismatches the training data ---
+        # frame = cv2.flip(frame, 1) 
 
-        # --- APPLY CROPPING LOGIC from badminton_utils.py ---
         h, w, _ = frame.shape
-        start_row = int(h * crop_config["top"])
-        end_row = h - int(h * crop_config["bottom"])
-        start_col = int(w * crop_config["left"])
-        end_col = w - int(w * crop_config["right"])
+        start_row, end_row = int(h * crop_config["top"]), h - int(h * crop_config["bottom"])
+        start_col, end_col = int(w * crop_config["left"]), w - int(w * crop_config["right"])
         frame_cropped = frame[start_row:end_row, start_col:end_col]
-        # --- END CROPPING ---
-
         if frame_cropped.size == 0: continue
 
         image_rgb = cv2.cvtColor(frame_cropped, cv2.COLOR_BGR2RGB)
@@ -83,28 +80,36 @@ def run_realtime_inference(model, label_map, sequence_length, crop_config):
         if results.pose_world_landmarks:
             mp_drawing.draw_landmarks(frame_cropped, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
             sequence_buffer.append(results.pose_world_landmarks.landmark)
+            
+            print(f"Buffer size: {len(sequence_buffer)}/{sequence_length}", end='\r')
 
-            if len(sequence_buffer) == sequence_length:
+            if len(sequence_buffer) == sequence_length and frame_counter % PREDICTION_INTERVAL == 0:
                 landmark_array = np.array([[[lm.x, lm.y, lm.z] for lm in frame_lms] for frame_lms in sequence_buffer])
-                
-                # USE YOUR FUNCTION for normalization
                 normalized_landmarks = normalize_landmarks(landmark_array)
                 
                 if normalized_landmarks is not None:
                     frame_features = normalized_landmarks.reshape(sequence_length, -1)
                     input_data = np.expand_dims(frame_features, axis=0)
-                    prediction = model.predict(input_data, verbose=0)
-                    current_prediction = label_map.get(np.argmax(prediction), "Unknown")
+                    probabilities = model.predict(input_data, verbose=0)[0]
+                    predictions_buffer.append(probabilities)
         
-        # Draw visualization on the original frame
+        if predictions_buffer:
+            avg_probabilities = np.mean(np.array(predictions_buffer), axis=0)
+            final_prediction_index = np.argmax(avg_probabilities)
+            display_prediction = label_map.get(final_prediction_index, "Unknown")
+        
+        frame_counter += 1
+        
         cv2.rectangle(frame, (start_col, start_row), (end_col, end_row), (0, 255, 0), 2)
-        cv2.rectangle(frame, (0, 0), (320, 40), (245, 117, 16), -1)
-        cv2.putText(frame, f'PREDICTION: {current_prediction}', (10, 30),
+        cv2.rectangle(frame, (0, 0), (450, 40), (245, 117, 16), -1)
+        cv2.putText(frame, f'PREDICTION: {display_prediction}', (10, 30),
                     cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
         cv2.imshow('Real-time Badminton Prediction', frame)
 
         if cv2.waitKey(5) & 0xFF == ord('q'): break
 
+    print("\nDone.")
+    print(display_prediction)
     cap.release()
     cv2.destroyAllWindows()
     pose.close()
@@ -112,11 +117,10 @@ def run_realtime_inference(model, label_map, sequence_length, crop_config):
 if __name__ == '__main__':
     MODEL_PATH, SEQUENCE_LENGTH, LABEL_MAP, CROP_CONFIG = get_project_config()
     
-    print(f"\nLoading model: {MODEL_PATH}...")
+    print(f"\nUsing SEQUENCE_LENGTH: {SEQUENCE_LENGTH}")
+    print(f"Loading model: {MODEL_PATH}...")
     try:
         model = tf.keras.models.load_model(MODEL_PATH)
         run_realtime_inference(model, LABEL_MAP, SEQUENCE_LENGTH, CROP_CONFIG)
-    except (FileNotFoundError, IOError):
-        print(f"FATAL ERROR: Model file not found at '{MODEL_PATH}'.")
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
