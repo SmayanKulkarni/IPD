@@ -35,24 +35,34 @@ def get_project_config():
 
 def run_realtime_inference(model, label_map, sequence_length, crop_config):
     """
-    Runs real-time inference with settings matched to the batch script for accuracy.
+    Runs real-time inference, disabling cropping for portrait videos.
     """
     PREDICTION_INTERVAL = 10 
     
     mp_pose = mp.solutions.pose
-    # --- CHANGED: Matched model_complexity to the batch script (2) ---
     pose = mp_pose.Pose(
         static_image_mode=False, 
         model_complexity=2, 
-        min_detection_confidence=0.5, 
-        min_tracking_confidence=0.5
+        min_detection_confidence=0.2, 
+        min_tracking_confidence=0.2
     )
     mp_drawing = mp.solutions.drawing_utils
-    cap = cv2.VideoCapture("/home/smayan/Desktop/IPD/Data/forehand_net_shot/052.mp4")
+    cap = cv2.VideoCapture("/home/smayan/Desktop/IPD/Data/forehand_lift/023.mp4")
 
     if not cap.isOpened():
         print("Error: Could not open video file.")
         return
+
+    # --- NEW: Check video orientation ---
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    is_portrait = height > width
+    
+    if is_portrait:
+        print("  -> Portrait video detected. Cropping will be disabled.")
+    else:
+        print("  -> Landscape video detected. Applying CROP_CONFIG.")
+    # ------------------------------------
 
     sequence_buffer = deque(maxlen=sequence_length)
     predictions_buffer = deque(maxlen=15) 
@@ -65,19 +75,28 @@ def run_realtime_inference(model, label_map, sequence_length, crop_config):
             print("End of video.")
             break
 
-        # --- REMOVED: Do not flip the frame, it mismatches the training data ---
-        # frame = cv2.flip(frame, 1) 
-
-        h, w, _ = frame.shape
-        start_row, end_row = int(h * crop_config["top"]), h - int(h * crop_config["bottom"])
-        start_col, end_col = int(w * crop_config["left"]), w - int(w * crop_config["right"])
-        frame_cropped = frame[start_row:end_row, start_col:end_col]
+        # --- NEW: Conditional Cropping Logic ---
+        if is_portrait:
+            frame_cropped = frame
+            # Define these for drawing the visualization box later
+            start_row, start_col = 0, 0
+            end_row, end_col = frame.shape[0], frame.shape[1]
+        else:
+            h, w, _ = frame.shape
+            start_row = int(h * crop_config["top"])
+            end_row = h - int(h * crop_config["bottom"])
+            start_col = int(w * crop_config["left"])
+            end_col = w - int(w * crop_config["right"])
+            frame_cropped = frame[start_row:end_row, start_col:end_col]
+        # ------------------------------------
+        
         if frame_cropped.size == 0: continue
 
         image_rgb = cv2.cvtColor(frame_cropped, cv2.COLOR_BGR2RGB)
         results = pose.process(image_rgb)
 
         if results.pose_world_landmarks:
+            # Draw landmarks on the (potentially cropped) frame region
             mp_drawing.draw_landmarks(frame_cropped, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
             sequence_buffer.append(results.pose_world_landmarks.landmark)
             
@@ -100,7 +119,11 @@ def run_realtime_inference(model, label_map, sequence_length, crop_config):
         
         frame_counter += 1
         
-        cv2.rectangle(frame, (start_col, start_row), (end_col, end_row), (0, 255, 0), 2)
+        # --- Visualization on the ORIGINAL frame ---
+        # Draw the crop box only for landscape videos
+        if not is_portrait:
+            cv2.rectangle(frame, (start_col, start_row), (end_col, end_row), (0, 255, 0), 2)
+
         cv2.rectangle(frame, (0, 0), (450, 40), (245, 117, 16), -1)
         cv2.putText(frame, f'PREDICTION: {display_prediction}', (10, 30),
                     cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
@@ -109,7 +132,6 @@ def run_realtime_inference(model, label_map, sequence_length, crop_config):
         if cv2.waitKey(5) & 0xFF == ord('q'): break
 
     print("\nDone.")
-    print(display_prediction)
     cap.release()
     cv2.destroyAllWindows()
     pose.close()
