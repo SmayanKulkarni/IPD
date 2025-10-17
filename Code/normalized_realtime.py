@@ -4,42 +4,63 @@ import mediapipe as mp
 from tensorflow.keras.models import load_model
 from collections import deque, Counter
 import os
-import argparse # --- NEW: Import argparse for command-line arguments ---
+import argparse
+import sys # Import sys for exiting gracefully
 
-# Import the necessary functions from your utilities
-from badminton_utils2 import normalize_sequence
+# --- Import the necessary functions from your utilities ---
+try:
+    from badminton_utils2 import normalize_sequence
+except ImportError:
+    print("FATAL ERROR: badminton_utils2.py not found.")
+    print("Please ensure this script is in the same directory as your utility file.")
+    sys.exit()
 
-# --- CONFIGURATION ---
-MODEL_PATH = 'badminton_shot_classifier_normalized.h5' 
-SEQUENCE_LENGTH = 40  # Must match the training configuration
+# --- DYNAMIC PATH CONFIGURATION ---
+# Get the absolute path to the directory containing this script (e.g., /path/to/IPD/Code)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# Get the parent directory (e.g., /path/to/IPD), which is our project root
+PROJECT_ROOT = os.path.dirname(BASE_DIR)
+
+# Construct absolute paths. This is the correct way to do it.
+MODEL_PATH = os.path.join(BASE_DIR, 'badminton_shot_classifier_normalized.h5')
+DATA_DIR = os.path.join(PROJECT_ROOT, 'Data_Normalized')
+
+# --- STATIC CONFIGURATION ---
+SEQUENCE_LENGTH = 40
 CROP_CONFIG = { "top": 0.10, "bottom": 0.45, "left": 0.25, "right": 0.25 }
-DATA_DIR = 'Data_Normalized'
 
 def get_label_map(data_dir):
     """Generates a map of class indices to shot names from the data directory."""
-    try:
-        shot_types = sorted([d for d in os.listdir(data_dir) if os.path.isdir(os.path.join(data_dir, d))])
-        return {i: label for i, label in enumerate(shot_types)}
-    except FileNotFoundError:
-        print(f"Error: Data directory '{data_dir}' not found. Cannot generate labels.")
+    if not os.path.isdir(data_dir):
+        print(f"\nFATAL ERROR: Data directory '{data_dir}' not found.")
+        print("Please ensure the 'Data_Normalized' directory is located alongside the 'Code' directory.")
         return None
+    
+    shot_types = sorted([d for d in os.listdir(data_dir) if os.path.isdir(os.path.join(data_dir, d))])
+    if not shot_types:
+        print(f"\nFATAL ERROR: No subdirectories found in '{data_dir}'. Cannot generate labels.")
+        return None
+        
+    return {i: label for i, label in enumerate(shot_types)}
 
-def run_realtime_inference(model, label_map, video_source): # --- NEW: Added video_source parameter ---
+def run_realtime_inference(model, label_map, video_source):
     """Runs real-time inference using the specified video source."""
     mp_pose = mp.solutions.pose
     pose = mp_pose.Pose(
-        static_image_mode=False, model_complexity=1, 
+        static_image_mode=False, model_complexity=1,
         min_detection_confidence=0.5, min_tracking_confidence=0.5
     )
     mp_drawing = mp.solutions.drawing_utils
 
-    # --- FIX: Use the video_source provided ---
-    # It can be a path (string) or a webcam ID (integer)
     is_webcam = (video_source == '0')
     cap = cv2.VideoCapture(int(video_source) if is_webcam else video_source)
 
+    if not cap.isOpened():
+        print(f"\nFATAL ERROR: Could not open video source: {video_source}")
+        return
+
     sequence_buffer = deque(maxlen=SEQUENCE_LENGTH)
-    prediction_buffer = deque(maxlen=15) # For smoothing predictions
+    prediction_buffer = deque(maxlen=15)
     display_prediction = "Waiting for data..."
 
     while cap.isOpened():
@@ -48,15 +69,12 @@ def run_realtime_inference(model, label_map, video_source): # --- NEW: Added vid
             print("End of video or camera feed.")
             break
         
-        # --- FIX: Only flip the frame if it's a webcam feed ---
         if is_webcam:
             frame = cv2.flip(frame, 1)
 
         h, w, _ = frame.shape
-        start_row = int(h * CROP_CONFIG["top"])
-        end_row = h - int(h * CROP_CONFIG["bottom"])
-        start_col = int(w * CROP_CONFIG["left"])
-        end_col = w - int(w * CROP_CONFIG["right"])
+        start_row, end_row = int(h * CROP_CONFIG["top"]), h - int(h * CROP_CONFIG["bottom"])
+        start_col, end_col = int(w * CROP_CONFIG["left"]), w - int(w * CROP_CONFIG["right"])
         frame_cropped = frame[start_row:end_row, start_col:end_col]
 
         if frame_cropped.size == 0:
@@ -91,28 +109,29 @@ def run_realtime_inference(model, label_map, video_source): # --- NEW: Added vid
         
         cv2.imshow('Smashifix - Real-time Inference', frame)
 
-        if cv2.waitKey(10) & 0xFF == ord('q'): # Increased wait key for smoother video playback
+        if cv2.waitKey(10) & 0xFF == ord('q'):
             break
-
+    print(display_prediction)
     cap.release()
     cv2.destroyAllWindows()
     pose.close()
 
 if __name__ == '__main__':
-    # --- NEW: Set up command-line argument parsing ---
     parser = argparse.ArgumentParser(description="Run real-time badminton shot inference.")
-    # --- FIX: Changed from '--video' to a positional argument ---
     parser.add_argument("video", type=str, nargs='?', default='0', help="Path to the video file or '0' for webcam (default).")
     args = parser.parse_args()
     
     label_map = get_label_map(DATA_DIR)
 
-    if label_map and os.path.exists(MODEL_PATH):
+    if not os.path.exists(MODEL_PATH):
+        print(f"\nFATAL ERROR: Model file not found at '{MODEL_PATH}'.")
+        sys.exit()
+
+    if label_map:
         print(f"Loading model: {MODEL_PATH}...")
         model = load_model(MODEL_PATH)
         print(f"Model loaded. Starting inference on source: {args.video}...")
-        # --- NEW: Pass the video source to the function ---
         run_realtime_inference(model, label_map, args.video)
     else:
-        print("Could not start inference. Check model path and data directory.")
-
+        # get_label_map will have already printed the specific error
+        print("Could not start inference.")

@@ -51,9 +51,9 @@ def get_project_config():
         print("\nFATAL ERROR: One or more configuration variables could not be found. Please check your files.")
         exit()
 
-    config['DATA_PATH'] = data_path_str
+    config['DATA_PATH'] = "/home/smayan/Desktop/IPD/Data_Normalized"
     config['SEQUENCE_LENGTH'] = int(seq_len_str)
-    config['MODEL_NAME'] = "/home/smayan/Desktop/IPD/Code/2_bigger_window_reduced_data_badminton_shot_classifier_v5.h5"
+    config['MODEL_NAME'] = "/home/smayan/Desktop/IPD/Code/badminton_shot_classifier_normalized.h5"
     try:
         config['CROP_CONFIG'] = eval(crop_config_str) # Safely evaluate the dict string
     except:

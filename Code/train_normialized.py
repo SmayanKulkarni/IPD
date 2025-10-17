@@ -8,8 +8,10 @@ from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 import tensorflow as tf
 
 # --- CONFIGURATION ---
-NORMALIZED_DATA_DIR = '/home/smayan/Desktop/IPD/Data_Normalized'
-MODEL_NAME = 'badminton_shot_classifier_normalized.h5'
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(BASE_DIR)
+NORMALIZED_DATA_DIR = os.path.join(PROJECT_ROOT, 'Data_Normalized')
+MODEL_NAME = os.path.join(BASE_DIR, 'badminton_shot_classifier_normalized.h5')
 SEQUENCE_LENGTH = 40
 
 def load_normalized_data(data_dir):
