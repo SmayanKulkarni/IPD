@@ -5,10 +5,13 @@ import cv2
 import mediapipe as mp
 import os
 import re
+import argparse # Import argparse for command-line arguments
+
+# --- Define a base directory to make all paths relative and portable ---
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # --- Directly import the required function from your utility file ---
 try:
-    # --- FIX: Changed function name to match the one in your utility file ---
     from badminton_utils2 import normalize_sequence
 except ImportError:
     print("FATAL ERROR: badminton_utils2.py not found.")
@@ -17,61 +20,38 @@ except ImportError:
 
 def get_project_config():
     """
-    Reads configuration from project files with robust error checking.
+    Sets up configuration by constructing paths relative to this script's location.
     """
     config = {}
-    print("--- Automatically Configuring from Project Files ---")
+    print("--- Configuring Paths ---")
 
-    def find_variable(file_path, var_name, pattern):
-        """Helper to find a variable in a file and handle errors."""
-        try:
-            with open(file_path, "r") as f:
-                content = f.read()
-                match = re.search(pattern, content, re.DOTALL)
-                if match:
-                    return match.group(1)
-                else:
-                    print(f"  -> WARNING: Could not find '{var_name}' in {file_path}.")
-                    return None
-        except FileNotFoundError:
-            print(f"FATAL ERROR: The file '{file_path}' was not found.")
-            exit()
-
-    # --- Read from proprocessing.py ---
-    proc_file = "normalized_proprocessing.py"
-    data_path_str = find_variable(proc_file, 'DATA_PATH', r"DATA_PATH\s*=\s*[\"'](.*?)[\"']")
-    seq_len_str = find_variable(proc_file, 'SEQUENCE_LENGTH', r"SEQUENCE_LENGTH\s*=\s*(\d+)")
-    crop_config_str = find_variable(proc_file, 'CROP_CONFIG', r"CROP_CONFIG\s*=\s*(\{.*?\})")
-
-    # --- Read from train.py ---
-    train_file = "train_normialized.py"
-    model_name_str = find_variable(train_file, 'MODEL_NAME', r"MODEL_NAME\s*=\s*[\"'](.*?)[\"']")
+    # --- FIX: Construct paths directly and robustly ---
+    # Assumes the script is in 'IPD/Code' and data is in 'IPD/Data_Normalized'
+    project_root = os.path.dirname(BASE_DIR)
     
-    # --- Validate and build config dictionary ---
-    if not all([data_path_str, seq_len_str, crop_config_str, model_name_str]):
-        print("\nFATAL ERROR: One or more configuration variables could not be found. Please check your files.")
-        exit()
+    config['DATA_PATH'] = os.path.join(project_root, "Data_Normalized")
+    config['MODEL_NAME'] = os.path.join(BASE_DIR, "badminton_shot_classifier_normalized.h5")
+    config['SEQUENCE_LENGTH'] = 40 # This should match your training configuration
+    config['CROP_CONFIG'] = { "top": 0.10, "bottom": 0.45, "left": 0.25, "right": 0.25 }
 
-    config['DATA_PATH'] = data_path_str
-    config['SEQUENCE_LENGTH'] = int(seq_len_str)
-    config['MODEL_NAME'] = "/home/smayan/Desktop/IPD/Code/badminton_shot_classifier_normalized.h5"
+    print(f"  -> Data path set to: {config['DATA_PATH']}")
+    print(f"  -> Model path set to: {config['MODEL_NAME']}")
+
+    # --- Automatically generate LABEL_MAP from the data folder structure ---
     try:
-        config['CROP_CONFIG'] = eval(crop_config_str) # Safely evaluate the dict string
-    except:
-        print(f"FATAL ERROR: Could not parse CROP_CONFIG dictionary: {crop_config_str}")
-        exit()
-
-    print(f"  -> Config loaded successfully.")
-
-    # --- Automatically generate LABEL_MAP from data folder structure ---
-    try:
+        if not os.path.isdir(config['DATA_PATH']):
+            raise FileNotFoundError(f"The directory '{config['DATA_PATH']}' does not exist.")
+            
         shot_types = sorted([d for d in os.listdir(config['DATA_PATH']) if os.path.isdir(os.path.join(config['DATA_PATH'], d))])
         if not shot_types:
-            raise FileNotFoundError(f"No subdirectories found in {config['DATA_PATH']}.")
+            raise FileNotFoundError(f"No shot type subdirectories found in {config['DATA_PATH']}.")
+            
         config['LABEL_MAP'] = {num: label for num, label in enumerate(shot_types)}
         print(f"  -> Successfully generated LABEL_MAP: {config['LABEL_MAP']}")
+        
     except FileNotFoundError as e:
-        print(f"FATAL ERROR: {e}")
+        print(f"\nFATAL ERROR: {e}")
+        print("Please ensure the 'Data_Normalized' directory is in the correct location and contains subfolders for each shot type.")
         exit()
 
     return config
@@ -109,13 +89,11 @@ def predict_shot_from_video(video_path, model, config):
     
     if not video_sequences: return "Could not generate sequences"
 
-    # --- FIX: Normalization is applied here to each window ---
     normalized_sequences = np.array([normalize_sequence(seq) for seq in video_sequences])
     if normalized_sequences.size == 0: return "Could not normalize landmarks"
     
     sequences_for_model = np.array([seq.reshape(seq.shape[0], -1) for seq in normalized_sequences])
     
-    # Average the prediction probabilities across all windows
     all_predictions = model.predict(sequences_for_model, verbose=0)
     avg_probabilities = np.mean(all_predictions, axis=0)
     final_prediction_index = np.argmax(avg_probabilities)
@@ -123,13 +101,16 @@ def predict_shot_from_video(video_path, model, config):
     return config['LABEL_MAP'].get(final_prediction_index, "Unknown Shot")
 
 if __name__ == '__main__':
-    VIDEO_TO_CLASSIFY = "/home/smayan/Desktop/IPD/Test/lift2.mp4"
-    
+    parser = argparse.ArgumentParser(description="Classify a badminton shot from a video file.")
+    # --- FIX: Completed the argument definition ---
+    parser.add_argument("video", type=str, help="Path to the video file to classify.")
+    args = parser.parse_args()
+
     config = get_project_config()
     
     try:
         model = tf.keras.models.load_model(config['MODEL_NAME'])
-        final_prediction = predict_shot_from_video(VIDEO_TO_CLASSIFY, model, config)
+        final_prediction = predict_shot_from_video(args.video, model, config)
         
         print("\n" + "="*30)
         print(f"🚀 Final Predicted Shot: {final_prediction}")
