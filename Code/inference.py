@@ -1,85 +1,137 @@
 import numpy as np
 import tensorflow as tf
 from collections import Counter
-from badminton_utils2    import extract_3d_landmarks_from_video, normalize_landmarks
+import cv2
+import mediapipe as mp
+import os
+import re
 
-def predict_shot_from_video(video_path, model, label_map, sequence_length=40, stride=5):
+# --- Directly import the required function from your utility file ---
+try:
+    from badminton_utils2 import normalize_landmarks
+except ImportError:
+    print("FATAL ERROR: badminton_utils.py not found.")
+    print("Please ensure this script is in the same directory as your utility file.")
+    exit()
+
+def get_project_config():
     """
-    Runs inference on a video file to predict the badminton shot type.
-    
-    Args:
-        video_path (str): Path to the input video file.
-        model (tf.keras.Model): The trained classification model.
-        label_map (dict): A dictionary mapping class indices to shot names.
-        sequence_length (int): The length of the sequences the model was trained on.
-        stride (int): The step size to use for the sliding window.
-        
-    Returns:
-        str: The predicted shot type for the video.
+    Reads configuration from project files with robust error checking.
     """
-    print(f"Processing video: {video_path}...")
+    config = {}
+    print("--- Automatically Configuring from Project Files ---")
+
+    def find_variable(file_path, var_name, pattern):
+        """Helper to find a variable in a file and handle errors."""
+        try:
+            with open(file_path, "r") as f:
+                content = f.read()
+                match = re.search(pattern, content, re.DOTALL)
+                if match:
+                    return match.group(1)
+                else:
+                    print(f"  -> WARNING: Could not find '{var_name}' in {file_path}.")
+                    return None
+        except FileNotFoundError:
+            print(f"FATAL ERROR: The file '{file_path}' was not found.")
+            exit()
+
+    # --- Read from proprocessing.py ---
+    proc_file = "proprocessing.py"
+    data_path_str = find_variable(proc_file, 'DATA_PATH', r"DATA_PATH\s*=\s*[\"'](.*?)[\"']")
+    seq_len_str = find_variable(proc_file, 'SEQUENCE_LENGTH', r"SEQUENCE_LENGTH\s*=\s*(\d+)")
+    crop_config_str = find_variable(proc_file, 'CROP_CONFIG', r"CROP_CONFIG\s*=\s*(\{.*?\})")
+
+    # --- Read from train.py ---
+    train_file = "train.py"
+    model_name_str = find_variable(train_file, 'MODEL_NAME', r"MODEL_NAME\s*=\s*[\"'](.*?)[\"']")
     
-    # 1. Extract and preprocess landmarks from the video
-    landmarks, _ = extract_3d_landmarks_from_video(video_path)
-    if landmarks is None or len(landmarks) < sequence_length:
+    # --- Validate and build config dictionary ---
+    if not all([data_path_str, seq_len_str, crop_config_str, model_name_str]):
+        print("\nFATAL ERROR: One or more configuration variables could not be found. Please check your files.")
+        exit()
+
+    config['DATA_PATH'] = "/home/smayan/Desktop/IPD/Data_Normalized"
+    config['SEQUENCE_LENGTH'] = int(seq_len_str)
+    config['MODEL_NAME'] = "/home/smayan/Desktop/IPD/Code/badminton_shot_classifier_normalized.h5"
+    try:
+        config['CROP_CONFIG'] = eval(crop_config_str) # Safely evaluate the dict string
+    except:
+        print(f"FATAL ERROR: Could not parse CROP_CONFIG dictionary: {crop_config_str}")
+        exit()
+
+    print(f"  -> Config loaded successfully.")
+
+    # --- Automatically generate LABEL_MAP from data folder structure ---
+    try:
+        shot_types = sorted([d for d in os.listdir(config['DATA_PATH']) if os.path.isdir(os.path.join(config['DATA_PATH'], d))])
+        if not shot_types:
+            raise FileNotFoundError(f"No subdirectories found in {config['DATA_PATH']}.")
+        config['LABEL_MAP'] = {num: label for num, label in enumerate(shot_types)}
+        print(f"  -> Successfully generated LABEL_MAP: {config['LABEL_MAP']}")
+    except FileNotFoundError as e:
+        print(f"FATAL ERROR: {e}")
+        exit()
+
+    return config
+
+def extract_3d_landmarks_from_video(video_path, crop_config):
+    mp_pose = mp.solutions.pose
+    pose = mp_pose.Pose(static_image_mode=False, model_complexity=2)
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened(): return None
+    all_landmarks = []
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret: break
+        h, w, _ = frame.shape
+        start_row, end_row = int(h * crop_config["top"]), h - int(h * crop_config["bottom"])
+        start_col, end_col = int(w * crop_config["left"]), w - int(w * crop_config["right"])
+        frame_cropped = frame[start_row:end_row, start_col:end_col]
+        if frame_cropped.size == 0: continue
+        results = pose.process(cv2.cvtColor(frame_cropped, cv2.COLOR_BGR2RGB))
+        if results.pose_world_landmarks:
+            all_landmarks.append([[lm.x, lm.y, lm.z] for lm in results.pose_world_landmarks.landmark])
+    cap.release()
+    pose.close()
+    return np.array(all_landmarks) if all_landmarks else None
+
+def predict_shot_from_video(video_path, model, config):
+    print(f"\nProcessing video: {video_path}...")
+    landmarks = extract_3d_landmarks_from_video(video_path, config['CROP_CONFIG'])
+    if landmarks is None or len(landmarks) < config['SEQUENCE_LENGTH']:
         return "Not enough data to classify"
-        
+    
     normalized_landmarks = normalize_landmarks(landmarks)
-    frame_features = normalized_landmarks.reshape(normalized_landmarks.shape[0], -1)
-
-    # 2. Use a sliding window to create sequences
+    if normalized_landmarks is None: return "Could not normalize landmarks"
+    
     video_sequences = []
-    for i in range(0, len(frame_features) - sequence_length + 1, stride):
-        window = frame_features[i: i + sequence_length]
-        video_sequences.append(window)
+    for i in range(0, len(normalized_landmarks) - config['SEQUENCE_LENGTH'] + 1, 10):
+        video_sequences.append(normalized_landmarks[i:i+config['SEQUENCE_LENGTH']])
     
-    if not video_sequences:
-        return "Could not generate sequences from video"
+    if not video_sequences: return "Could not generate sequences"
+    
+    sequences_for_model = np.array([seq.reshape(seq.shape[0], -1) for seq in video_sequences])
+    
+    # Average the prediction probabilities across all windows
+    all_predictions = model.predict(sequences_for_model, verbose=0)
+    avg_probabilities = np.mean(all_predictions, axis=0)
+    final_prediction_index = np.argmax(avg_probabilities)
 
-    # 3. Make predictions on each sequence
-    predictions = model.predict(np.array(video_sequences))
-    predicted_class_indices = np.argmax(predictions, axis=1)
-
-    # 4. Aggregate predictions with a majority vote
-    if len(predicted_class_indices) == 0:
-        return "Prediction failed"
-        
-    most_common_index = Counter(predicted_class_indices).most_common(1)[0][0]
-    
-    # 5. Map the index back to the shot name
-    predicted_shot = label_map.get(most_common_index, "Unknown Shot")
-    
-    return predicted_shot
+    return config['LABEL_MAP'].get(final_prediction_index, "Unknown Shot")
 
 if __name__ == '__main__':
-    # --- CONFIGURATION ---
-    MODEL_PATH = "/home/smayan/Desktop/IPD/Code/badminton_shot_classifier_v3_sliced.h5"  # <--- CHANGE THIS to your model path
-    VIDEO_PATH = "/home/smayan/Desktop/IPD/Data/forehand_net_shot/012.mp4"              # <--- CHANGE THIS to your video path
-    SEQUENCE_LENGTH = 50# Must be the same as used in training
+    VIDEO_TO_CLASSIFY = "/home/smayan/Desktop/IPD/Data/forehand_net_shot/052.mp4"
     
-    # --- IMPORTANT ---
-    # You MUST use the same label map that was generated during training.
-    # The order of shot types matters.
-    LABEL_MAP = {
-        0: "clear",
-        1: "drive",
-        2: "drop",
-        3: "smash"
-        # ... add all your shot types here in the correct order
-    }
+    config = get_project_config()
     
-    # Load the trained model
-    print(f"Loading model from {MODEL_PATH}...")
-    model = tf.keras.models.load_model(MODEL_PATH)
-
-    # Run inference
-    final_prediction = predict_shot_from_video(
-        VIDEO_PATH, 
-        model, 
-        LABEL_MAP, 
-        sequence_length=SEQUENCE_LENGTH
-    )
-    
-    print("\n" + "="*30)
-    print(f"🚀 Final Predicted Shot: {final_prediction}")
-    print("="*30)
+    try:
+        model = tf.keras.models.load_model(config['MODEL_NAME'])
+        final_prediction = predict_shot_from_video(VIDEO_TO_CLASSIFY, model, config)
+        
+        print("\n" + "="*30)
+        print(f"🚀 Final Predicted Shot: {final_prediction}")
+        print("="*30)
+        
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
