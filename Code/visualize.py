@@ -102,7 +102,7 @@ def visualize_keypoints_on_video(video_path, crop_config=None):
     plt.close(fig)
 
 if __name__ == '__main__':
-    VIDEO_FILE = "/home/smayan/Desktop/IPD/Data/forehand_drive/009.mp4"  
+    VIDEO_FILE = "/home/smayan/Desktop/IPD/Data/forehand_clear/008.mp4"  
     filename = os.path.basename(VIDEO_FILE)
     filename_without_ext = os.path.splitext(filename)[0]
     active_crop_config = CROP_CONFIG if filename_without_ext.isdigit() else None

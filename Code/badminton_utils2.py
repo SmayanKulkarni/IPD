@@ -73,3 +73,68 @@ def build_lstm_model(input_shape, num_classes):
     ])
     model.compile(optimizer='Adam', loss='categorical_crossentropy', metrics=['accuracy'])
     return model    
+
+def normalize_pose(keypoints_3d):
+    """
+    Normalizes a single 3D pose to a standard, person-centric coordinate system.
+    The output pose will be centered, upright, and scaled.
+    
+    :param keypoints_3d: A numpy array of shape (num_keypoints, 3) for a single frame.
+    :return: Normalized keypoints as a numpy array of the same shape.
+    """
+    # Keypoint indices from MediaPipe
+    LEFT_SHOULDER = 11
+    RIGHT_SHOULDER = 12
+    LEFT_HIP = 23
+    RIGHT_HIP = 24
+
+    # --- 1. Centering ---
+    # Calculate the hip center and move it to the origin (0,0,0).
+    hip_center = (keypoints_3d[LEFT_HIP] + keypoints_3d[RIGHT_HIP]) / 2.0
+    centered_keypoints = keypoints_3d - hip_center
+
+    # --- 2. Alignment ---
+    # Create a new coordinate system based on the body's orientation.
+    shoulder_center = (centered_keypoints[LEFT_SHOULDER] + centered_keypoints[RIGHT_SHOULDER]) / 2.0
+    
+    # Avoid division-by-zero if shoulders are too close
+    if np.linalg.norm(shoulder_center) < 1e-6:
+        return centered_keypoints # Return centered keypoints if spine length is negligible
+
+    new_y = shoulder_center / np.linalg.norm(shoulder_center)
+
+    right_shoulder_vec = centered_keypoints[RIGHT_SHOULDER] - centered_keypoints[LEFT_SHOULDER]
+    proj_on_y = np.dot(right_shoulder_vec, new_y) * new_y
+    new_x = right_shoulder_vec - proj_on_y
+
+    # Avoid division-by-zero if shoulders are perfectly aligned with the spine
+    if np.linalg.norm(new_x) < 1e-6:
+         # Create an arbitrary orthogonal vector if the shoulder vector is not usable
+        if abs(new_y[0]) > 0.5:
+             new_x = np.cross(new_y, [0, 1, 0])
+        else:
+            new_x = np.cross(new_y, [1, 0, 0])
+    
+    new_x = new_x / np.linalg.norm(new_x)
+    new_z = np.cross(new_x, new_y)
+
+    rotation_matrix = np.array([new_x, new_y, new_z])
+    aligned_keypoints = np.dot(centered_keypoints, rotation_matrix.T)
+
+    # --- 3. Scaling ---
+    spine_length = np.linalg.norm(shoulder_center)
+    if spine_length > 1e-6:
+        normalized_keypoints = aligned_keypoints / spine_length
+    else:
+        normalized_keypoints = aligned_keypoints
+        
+    return normalized_keypoints
+
+def normalize_sequence(keypoints_sequence):
+    """
+    Applies pose normalization to an entire sequence of frames.
+    
+    :param keypoints_sequence: A numpy array of shape (num_frames, num_keypoints, 3).
+    :return: Normalized sequence of keypoints of the same shape.
+    """
+    return np.array([normalize_pose(frame) for frame in keypoints_sequence])
