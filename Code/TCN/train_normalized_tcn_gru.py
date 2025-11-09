@@ -33,18 +33,18 @@ def build_tcn_gru(input_shape, num_classes):
     model = Sequential([
         # --- Temporal Convolutional Stack (TCN-like) ---
         Conv1D(128, 3, dilation_rate=1, padding='causal'),
-        BatchNormalization(), ReLU(),
+        BatchNormalization(), ReLU(), Dropout(0.5),
         Conv1D(128, 3, dilation_rate=2, padding='causal'),
-        BatchNormalization(), ReLU(),
+        BatchNormalization(), ReLU(), Dropout(0.4),
         Conv1D(128, 3, dilation_rate=4, padding='causal'),
         BatchNormalization(), ReLU(),
         Dropout(0.3),
 
         # --- Temporal summarizer ---
-        GRU(128, return_sequences=False),
+        GRU(64, return_sequences=False),
 
         # --- Classifier ---
-        Dense(64, activation='relu'),
+        Dense(32, activation='relu'),
         Dropout(0.3),
         Dense(num_classes, activation='softmax')
     ])
