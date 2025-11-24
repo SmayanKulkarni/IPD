@@ -1,3 +1,6 @@
-Data/
+data/
 Data_Normalized/
 Data_Normalized_Hybrid/
+mlruns/
+dvclive/
+.vscode/

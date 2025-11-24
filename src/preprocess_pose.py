@@ -18,8 +18,17 @@ def main():
         if not os.path.isdir(cls_in): continue
         os.makedirs(cls_out, exist_ok=True)
         
-        for vid in tqdm(os.listdir(cls_in), desc=f"Pose Prep {cls}"):
-            if not vid.endswith(('.mp4', '.avi', '.mov')): continue
+        # Get list of videos
+        videos = [v for v in os.listdir(cls_in) if v.endswith(('.mp4', '.avi', '.mov'))]
+        
+        for vid in tqdm(videos, desc=f"Pose Prep {cls}"):
+            # --- NEW: CHECK IF ALREADY PROCESSED ---
+            # We check for the first window (window_0). If it exists, we assume the video is done.
+            first_window_path = os.path.join(cls_out, f"{vid[:-4]}_win_0.npz")
+            if os.path.exists(first_window_path):
+                continue  # Skip this video
+            # ---------------------------------------
+
             cap = cv2.VideoCapture(os.path.join(cls_in, vid))
             frames, fps = [], cap.get(cv2.CAP_PROP_FPS)
             while True:

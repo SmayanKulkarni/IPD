@@ -14,8 +14,15 @@ def main():
         if not os.path.isdir(cls_in): continue
         os.makedirs(cls_out, exist_ok=True)
         
-        for vid in tqdm(os.listdir(cls_in), desc=f"Hybrid Prep {cls}"):
-            if not vid.endswith(('.mp4', '.avi', '.mov')): continue
+        videos = [v for v in os.listdir(cls_in) if v.endswith(('.mp4', '.avi', '.mov'))]
+        
+        for vid in tqdm(videos, desc=f"Hybrid Prep {cls}"):
+            # --- NEW: CHECK IF ALREADY PROCESSED ---
+            first_window_path = os.path.join(cls_out, f"{vid[:-4]}_win_0.npz")
+            if os.path.exists(first_window_path):
+                continue
+            # ---------------------------------------
+
             data, fps = extractor.extract(os.path.join(cls_in, vid), cfg['crop_config'])
             if data is None or len(data) < cfg['sequence_length']: continue
             

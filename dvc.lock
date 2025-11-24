@@ -1,0 +1,153 @@
+schema: '2.0'
+stages:
+  generate_templates:
+    cmd: python src/generate_templates.py
+    deps:
+    - path: data/expert_data
+      hash: md5
+      md5: d751713988987e9331980363e24189ce.dir
+      size: 0
+      nfiles: 0
+    - path: src/features.py
+      hash: md5
+      md5: f9ffe224cb70c02f44598e3049bee37f
+      size: 3487
+    - path: src/generate_templates.py
+      hash: md5
+      md5: a00729b0cd737c42c277799c9b08ae85
+      size: 1215
+    - path: src/ksi.py
+      hash: md5
+      md5: 2c6301e9f10ceab535c7f83913aef364
+      size: 3050
+    params:
+      params.yaml:
+        expert_pipeline:
+          raw_path: data/expert_data
+          output_path: data/expert_templates.npz
+        mediapipe:
+          model_complexity: 1
+          min_detection_confidence: 0.3
+          min_tracking_confidence: 0.3
+    outs:
+    - path: data/expert_templates.npz
+      hash: md5
+      md5: 76cdb2bad9582d23c1f6f4d868218d6c
+      size: 22
+  preprocess_pose:
+    cmd: python src/preprocess_pose.py
+    deps:
+    - path: data/raw
+      hash: md5
+      md5: 0d4bdf84127c877b90725047181f5e29.dir
+      size: 1311637800
+      nfiles: 1
+    - path: src/preprocess_pose.py
+      hash: md5
+      md5: bb5d5815e78bfdcfcff51fd1e1474e76
+      size: 2495
+    - path: src/utils.py
+      hash: md5
+      md5: a378ad2baa7615bf1b7452a50a070c86
+      size: 1211
+    params:
+      params.yaml:
+        mediapipe:
+          model_complexity: 1
+          min_detection_confidence: 0.3
+          min_tracking_confidence: 0.3
+        pose_pipeline:
+          data_path: data/Data_Normalized
+          model_path: models/lstm_pose.h5
+          sequence_length: 40
+          stride: 5
+          batch_size: 16
+          epochs: 100
+          crop_config:
+            top: 0.1
+            bottom: 0.45
+            left: 0.25
+            right: 0.25
+    outs:
+    - path: data/Data_Normalized
+      hash: md5
+      md5: d751713988987e9331980363e24189ce.dir
+      size: 0
+      nfiles: 0
+  preprocess_hybrid:
+    cmd: python src/preprocess_hybrid.py
+    deps:
+    - path: data/raw
+      hash: md5
+      md5: 8dd73e8e67625de2e804d5504a46159a.dir
+      size: 1315787364
+      nfiles: 836
+    - path: src/features.py
+      hash: md5
+      md5: f9ffe224cb70c02f44598e3049bee37f
+      size: 3487
+    - path: src/preprocess_hybrid.py
+      hash: md5
+      md5: a1142301b2175f7c1afe6291d356408b
+      size: 1496
+    params:
+      params.yaml:
+        hybrid_pipeline:
+          data_path: data/Data_Normalized_Hybrid
+          model_path: models/tcn_hybrid.h5
+          sequence_length: 40
+          stride: 5
+          batch_size: 8
+          epochs: 150
+          cnn_feature_dim: 128
+          crop_config:
+            top: 0.1
+            bottom: 0.45
+            left: 0.25
+            right: 0.25
+        mediapipe:
+          model_complexity: 1
+          min_detection_confidence: 0.3
+          min_tracking_confidence: 0.3
+    outs:
+    - path: data/Data_Normalized_Hybrid
+      hash: md5
+      md5: a2eca1359277a0f5223653ca10b37588.dir
+      size: 288015172
+      nfiles: 3937
+  train_hybrid:
+    cmd: python src/train_hybrid.py
+    deps:
+    - path: data/Data_Normalized_Hybrid
+      hash: md5
+      md5: a2eca1359277a0f5223653ca10b37588.dir
+      size: 288015172
+      nfiles: 3937
+    - path: src/models.py
+      hash: md5
+      md5: a3a4f98debb69ab483da5d78288dde00
+      size: 1926
+    - path: src/train_hybrid.py
+      hash: md5
+      md5: 6371615eafae515d7d2db14947648343
+      size: 2639
+    params:
+      params.yaml:
+        hybrid_pipeline:
+          data_path: data/Data_Normalized_Hybrid
+          model_path: models/tcn_hybrid.h5
+          sequence_length: 40
+          stride: 5
+          batch_size: 8
+          epochs: 150
+          cnn_feature_dim: 128
+          crop_config:
+            top: 0.1
+            bottom: 0.45
+            left: 0.25
+            right: 0.25
+    outs:
+    - path: models/tcn_hybrid.h5
+      hash: md5
+      md5: 4d7e9aa27cc303c87a3028af72e94a3a
+      size: 1337320

@@ -1,87 +1,94 @@
 stages:
-  generate_templates:
-    cmd: python src/generate_templates.py
-    deps:
-      - src/generate_templates.py
-      - src/ksi.py
-      - src/features.py
-      - data/expert_data
-    params:
-      - expert_pipeline
-      - mediapipe
-    outs:
-      - data/expert_templates.npz
-
-  preprocess_pose:
-    cmd: python src/preprocess_pose.py
-    deps:
-      - src/preprocess_pose.py
-      - src/utils.py
-      - data/raw
-    params:
-      - pose_pipeline
-      - mediapipe
-    outs:
-      - data/Data_Normalized
-
-  train_pose:
-    cmd: python src/train_pose.py
-    deps:
-      - src/train_pose.py
-      - src/models.py
-      - data/Data_Normalized
-    params:
-      - pose_pipeline
-    outs:
-      - models/lstm_pose.h5
-
-  eval_pose:
-    cmd: python src/evaluate.py --type pose
-    deps:
-      - src/evaluate.py
-      - models/lstm_pose.h5
-      - data/Data_Normalized
-      - data/expert_templates.npz
-    metrics:
-      - dvclive/pose_metrics.json:
-          cache: false
-    plots:
-      - dvclive/pose_confusion_matrix.png:
-          cache: false
-
+  # generate_templates:
+  #   cmd: python src/generate_templates.py
+  #   deps:
+  #     - src/generate_templates.py
+  #     - src/ksi.py
+  #     - src/features.py
+  #     - data/expert_data
+  #   params:
+  #     - expert_pipeline
+  #     - mediapipe
+  #   outs:
+  #     - data/expert_templates.npz
   preprocess_hybrid:
     cmd: python src/preprocess_hybrid.py
     deps:
-      - src/preprocess_hybrid.py
-      - src/features.py
-      - data/raw
+    - src/preprocess_hybrid.py
+    - src/features.py
+    - data/raw
     params:
-      - hybrid_pipeline
-      - mediapipe
+    - hybrid_pipeline
+    - mediapipe
     outs:
-      - data/Data_Normalized_Hybrid
+    - data/Data_Normalized_Hybrid:
+        persist: true    # <--- KEEPS DATA BETWEEN RUNS
 
   train_hybrid:
     cmd: python src/train_hybrid.py
     deps:
-      - src/train_hybrid.py
-      - src/models.py
-      - data/Data_Normalized_Hybrid
+    - src/train_hybrid.py
+    - src/models.py
+    - data/Data_Normalized_Hybrid
     params:
-      - hybrid_pipeline
+    - hybrid_pipeline
     outs:
-      - models/tcn_hybrid.h5
+    - models/tcn_hybrid.h5
 
   eval_hybrid:
     cmd: python src/evaluate.py --type hybrid
     deps:
-      - src/evaluate.py
-      - models/tcn_hybrid.h5
-      - data/Data_Normalized_Hybrid
-      - data/expert_templates.npz
+    - src/evaluate.py
+    - models/tcn_hybrid.h5
+    - data/Data_Normalized_Hybrid
+    - data/expert_templates.npz
     metrics:
-      - dvclive/hybrid_metrics.json:
-          cache: false
+    - dvclive/hybrid_metrics.json:
+        cache: false
     plots:
-      - dvclive/hybrid_confusion_matrix.png:
-          cache: false
+    - dvclive/hybrid_confusion_matrix.png:
+        cache: false
+
+  preprocess_pose:
+    cmd: python src/preprocess_pose.py
+    deps:
+    - src/preprocess_pose.py
+    - src/utils.py
+    - data/raw
+    params:
+    - pose_pipeline
+    - mediapipe
+    outs:
+    - data/Data_Normalized:
+        persist: true    # <--- KEEPS DATA BETWEEN RUNS
+
+  train_pose:
+    cmd: python src/train_pose.py
+    deps:
+    - src/train_pose.py
+    - src/models.py
+    - data/Data_Normalized
+    params:
+    - pose_pipeline
+    outs:
+    - models/lstm_pose.h5
+
+  eval_pose:
+    cmd: python src/evaluate.py --type pose
+    deps:
+    - src/evaluate.py
+    - models/lstm_pose.h5
+    - data/Data_Normalized
+    - data/expert_templates.npz
+    metrics:
+    - dvclive/pose_metrics.json:
+        cache: false
+    plots:
+    - dvclive/pose_confusion_matrix.png:
+        cache: false
+
+metrics:
+- dvclive/metrics.json
+plots:
+- dvclive/plots/metrics:
+    x: step
