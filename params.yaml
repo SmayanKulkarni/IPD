@@ -7,36 +7,36 @@ mediapipe:
   min_detection_confidence: 0.3
   min_tracking_confidence: 0.3
 
-# Experiment 1: Pose-Only (LSTM)
+# --- POSE PIPELINE (Formerly "Normalized") ---
 pose_pipeline:
   data_path: "data/Data_Normalized"
   model_path: "models/lstm_pose.h5"
   sequence_length: 40
   stride: 5
   batch_size: 16
-  epochs: 100
+  epochs: 80
   crop_config: 
     top: 0.10
     bottom: 0.45
     left: 0.25
     right: 0.25
 
-# Experiment 2: Hybrid (TCN-GRU)
+# --- HYBRID PIPELINE (TCN) ---
 hybrid_pipeline:
   data_path: "data/Data_Normalized_Hybrid"
   model_path: "models/tcn_hybrid.h5"
   sequence_length: 40
   stride: 5
   batch_size: 8
-  epochs: 150
-  cnn_feature_dim: 128
+  epochs: 120
+  cnn_feature_dim: 64
   crop_config:
     top: 0.10
     bottom: 0.45
     left: 0.25
     right: 0.25
 
-# Experiment 3: Expert Templates
+# --- EXPERT TEMPLATES ---
 expert_pipeline:
   raw_path: "data/expert_data"
   output_path: "data/expert_templates.npz"

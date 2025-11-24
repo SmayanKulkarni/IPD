@@ -7,18 +7,32 @@ from tensorflow.keras.layers import (
 from tensorflow.keras.regularizers import l2
 
 def build_lstm_pose(input_shape, num_classes):
+    """
+    Conv1D + LSTM model strictly from train_normialized.py
+    """
     model = Sequential([
-        Conv1D(128, 4, activation='relu', input_shape=input_shape),
-        MaxPooling1D(3), Dropout(0.3),
-        LSTM(128, return_sequences=True, activation='relu'), Dropout(0.4),
+        # Feature Extractor
+        Conv1D(filters=128, kernel_size=4, activation='relu', input_shape=input_shape),
+        MaxPooling1D(pool_size=3),
+        Dropout(0.3),
+        
+        # Sequence Modeling
+        LSTM(128, return_sequences=True, activation='relu'),
+        Dropout(0.4),
         BatchNormalization(),
-        LSTM(64, activation='relu'), Dropout(0.3),
-        Dense(64, activation='relu'), Dropout(0.2),
+        
+        LSTM(64, activation='relu'),
+        Dropout(0.3),
+        
+        # Classifier
+        Dense(64, activation='relu'),
+        Dropout(0.2),
         Dense(num_classes, activation='softmax')
     ])
     model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
     return model
 
+# (Keep build_tcn_hybrid here if you still want to support the other pipeline)
 def build_tcn_hybrid(pose_shape, cnn_shape, num_classes):
     reg = l2(1e-4)
     cnn_in = Input(shape=cnn_shape)

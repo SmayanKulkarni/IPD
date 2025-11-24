@@ -2,8 +2,8 @@ import numpy as np
 
 def normalize_pose(keypoints_3d):
     """
-    Normalizes a single 3D pose to be person-centric.
-    Output: (33, 3) numpy array
+    Normalizes a single 3D pose (33, 3) to a standard, person-centric coordinate system.
+    (Centering -> Alignment -> Scaling)
     """
     if keypoints_3d.shape != (33, 3): return keypoints_3d
     
@@ -23,7 +23,6 @@ def normalize_pose(keypoints_3d):
     new_y = shoulder_center / spine_len
     right_shoulder_vec = centered[RIGHT_SHOULDER] - centered[LEFT_SHOULDER]
     
-    # Orthogonalize X
     proj = np.dot(right_shoulder_vec, new_y) * new_y
     new_x = right_shoulder_vec - proj
     
@@ -38,3 +37,7 @@ def normalize_pose(keypoints_3d):
 
     # 3. Scaling
     return aligned / spine_len
+
+def normalize_sequence(keypoints_sequence):
+    """Applies pose normalization to an entire sequence of frames."""
+    return np.array([normalize_pose(frame) for frame in keypoints_sequence])

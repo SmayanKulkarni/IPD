@@ -1,4 +1,5 @@
 stages:
+  # --- EXPERT DATA TEMPLATES ---
   # generate_templates:
   #   cmd: python src/generate_templates.py
   #   deps:
@@ -11,44 +12,8 @@ stages:
   #     - mediapipe
   #   outs:
   #     - data/expert_templates.npz
-  preprocess_hybrid:
-    cmd: python src/preprocess_hybrid.py
-    deps:
-    - src/preprocess_hybrid.py
-    - src/features.py
-    - data/raw
-    params:
-    - hybrid_pipeline
-    - mediapipe
-    outs:
-    - data/Data_Normalized_Hybrid:
-        persist: true    # <--- KEEPS DATA BETWEEN RUNS
 
-  train_hybrid:
-    cmd: python src/train_hybrid.py
-    deps:
-    - src/train_hybrid.py
-    - src/models.py
-    - data/Data_Normalized_Hybrid
-    params:
-    - hybrid_pipeline
-    outs:
-    - models/tcn_hybrid.h5
-
-  eval_hybrid:
-    cmd: python src/evaluate.py --type hybrid
-    deps:
-    - src/evaluate.py
-    - models/tcn_hybrid.h5
-    - data/Data_Normalized_Hybrid
-    - data/expert_templates.npz
-    metrics:
-    - dvclive/hybrid_metrics.json:
-        cache: false
-    plots:
-    - dvclive/hybrid_confusion_matrix.png:
-        cache: false
-
+  # --- POSE PIPELINE (Normalized) ---
   preprocess_pose:
     cmd: python src/preprocess_pose.py
     deps:
@@ -60,7 +25,7 @@ stages:
     - mediapipe
     outs:
     - data/Data_Normalized:
-        persist: true    # <--- KEEPS DATA BETWEEN RUNS
+        persist: true
 
   train_pose:
     cmd: python src/train_pose.py
@@ -73,20 +38,58 @@ stages:
     outs:
     - models/lstm_pose.h5
 
-  eval_pose:
-    cmd: python src/evaluate.py --type pose
-    deps:
-    - src/evaluate.py
-    - models/lstm_pose.h5
-    - data/Data_Normalized
-    - data/expert_templates.npz
-    metrics:
-    - dvclive/pose_metrics.json:
-        cache: false
-    plots:
-    - dvclive/pose_confusion_matrix.png:
-        cache: false
+  # eval_pose:
+  #   cmd: python src/evaluate.py --type pose
+  #   deps:
+  #     - src/evaluate.py
+  #     - models/lstm_pose.h5
+  #     - data/Data_Normalized
+  #     - data/expert_templates.npz
+  #   metrics:
+  #     - dvclive/pose_metrics.json:
+  #         cache: false
+  #   plots:
+  #     - dvclive/pose_confusion_matrix.png:
+  #         cache: false
 
+  # --- HYBRID PIPELINE (TCN) ---
+  preprocess_hybrid:
+    cmd: python src/preprocess_hybrid.py
+    deps:
+    - src/preprocess_hybrid.py
+    - src/features.py
+    - data/raw
+    params:
+    - hybrid_pipeline
+    - mediapipe
+    outs:
+    - data/Data_Normalized_Hybrid:
+        persist: true
+
+  train_hybrid:
+    cmd: python src/train_hybrid.py
+    deps:
+    - src/train_hybrid.py
+    - src/models.py
+    - data/Data_Normalized_Hybrid
+    params:
+    - hybrid_pipeline
+    outs:
+    - models/tcn_hybrid.h5
+
+  # eval_hybrid:
+  #   cmd: python src/evaluate.py --type hybrid
+  #   deps:
+  #     - src/evaluate.py
+  #     - models/tcn_hybrid.h5
+  #     - data/Data_Normalized_Hybrid
+  #     - data/expert_templates.npz
+  #   metrics:
+  #     - dvclive/hybrid_metrics.json:
+  #         cache: false
+  #   plots:
+  #     - dvclive/hybrid_confusion_matrix.png:
+  #         cache: false
 metrics:
 - dvclive/metrics.json
 plots:

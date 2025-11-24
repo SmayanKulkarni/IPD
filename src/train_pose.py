@@ -3,6 +3,7 @@ import yaml
 import numpy as np
 import mlflow
 import mlflow.tensorflow
+import tensorflow as tf  # <--- Added import
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
@@ -16,8 +17,10 @@ def main():
     
     # 1. Setup MLflow Experiment & System Monitoring
     mlflow.set_experiment("Pose_LSTM_Experiment")
-    mlflow.enable_system_metrics_logging()  # Logs CPU/GPU usage
-    mlflow.tensorflow.autolog(log_models=False)  # Logs curves & model summary automatically
+    mlflow.enable_system_metrics_logging()
+    
+    # We disable auto-logging for models to manually log the BEST one later
+    mlflow.tensorflow.autolog(log_models=False)
 
     with mlflow.start_run():
         # 2. Log Parameters
@@ -48,9 +51,10 @@ def main():
         # 4. Build Model
         model = build_lstm_pose(X_train.shape[1:], len(classes))
         
-        # 5. Callbacks (DVC + MLflow + Keras)
+        # 5. Callbacks
         callbacks = [
             EarlyStopping(patience=10, restore_best_weights=True),
+            # Saves the best model to the local path defined in params.yaml
             ModelCheckpoint(cfg['model_path'], save_best_only=True),
             DVCLiveCallback(save_dvc_exp=True)
         ]
@@ -62,9 +66,20 @@ def main():
             callbacks=callbacks
         )
         
-        # 6. Log Best Metric Explicitly
         best_val_acc = max(history.history['val_accuracy'])
         mlflow.log_metric("best_val_accuracy", best_val_acc)
         print(f"Training finished. Best Val Acc: {best_val_acc}")
+
+        # 6. Log and Register the Best Model
+        print("Logging and Registering Best Model to MLflow...")
+        # Load the best model from the checkpoint file
+        best_model = tf.keras.models.load_model(cfg['model_path'])
+        
+        mlflow.keras.log_model(
+            best_model, 
+            artifact_path="model", 
+            registered_model_name="Pose_LSTM" # <--- Registers model in Registry
+        )
+        print("Model registered as 'Pose_LSTM'.")
 
 if __name__ == "__main__": main()

@@ -11,6 +11,6 @@ dvclive
 matplotlib
 seaborn
 scipy
-pydantic<2.0  # <--- ADD THIS LINE
+pydantic<2.0  
 psutil
 pynvml

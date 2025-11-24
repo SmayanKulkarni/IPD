@@ -3,6 +3,7 @@ import yaml
 import numpy as np
 import mlflow
 import mlflow.tensorflow
+import tensorflow as tf # <--- Added import
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
@@ -14,9 +15,11 @@ def main():
     with open("params.yaml") as f: params = yaml.safe_load(f)
     cfg = params['hybrid_pipeline']
     
-    # 1. Setup MLflow Experiment & System Monitoring
+    # 1. Setup MLflow Experiment
     mlflow.set_experiment("Hybrid_TCN_Experiment")
     mlflow.enable_system_metrics_logging()
+    
+    # Disable auto model logging so we can do it manually for the best version
     mlflow.tensorflow.autolog(log_models=False)
 
     with mlflow.start_run():
@@ -72,5 +75,16 @@ def main():
         best_val_acc = max(history.history['val_accuracy'])
         mlflow.log_metric("best_val_accuracy", best_val_acc)
         print(f"Training finished. Best Val Acc: {best_val_acc}")
+
+        # 7. Log and Register the Best Model
+        print("Logging and Registering Best Model to MLflow...")
+        best_model = tf.keras.models.load_model(cfg['model_path'])
+        
+        mlflow.keras.log_model(
+            best_model, 
+            artifact_path="model", 
+            registered_model_name="Hybrid_TCN" # <--- Registers model in Registry
+        )
+        print("Model registered as 'Hybrid_TCN'.")
 
 if __name__ == "__main__": main()
