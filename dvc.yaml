@@ -4,7 +4,7 @@ stages:
   #   cmd: python src/generate_templates.py
   #   deps:
   #     - src/generate_templates.py
-  #     - src/ksi.py
+  #     - src/ksi_v2.py
   #     - src/features.py
   #     - data/expert_data
   #   params:
@@ -23,6 +23,8 @@ stages:
     params:
     - pose_pipeline
     - mediapipe
+    - segment_rules
+    - crop_overrides
     outs:
     - data/Data_Normalized:
         persist: true
@@ -38,19 +40,18 @@ stages:
     outs:
     - models/lstm_pose.h5
 
-  # eval_pose:
-  #   cmd: python src/evaluate.py --type pose
-  #   deps:
-  #     - src/evaluate.py
-  #     - models/lstm_pose.h5
-  #     - data/Data_Normalized
-  #     - data/expert_templates.npz
-  #   metrics:
-  #     - dvclive/pose_metrics.json:
-  #         cache: false
-  #   plots:
-  #     - dvclive/pose_confusion_matrix.png:
-  #         cache: false
+  eval_pose:
+    cmd: python src/evaluate.py --type pose
+    deps:
+    - src/evaluate.py
+    - models/lstm_pose.h5
+    - data/Data_Normalized
+    metrics:
+    - dvclive/pose_metrics.json:
+        cache: false
+    plots:
+    - dvclive/pose_confusion_matrix.png:
+        cache: false
 
   # --- HYBRID PIPELINE (TCN) ---
   preprocess_hybrid:
@@ -58,10 +59,13 @@ stages:
     deps:
     - src/preprocess_hybrid.py
     - src/features.py
+    - src/utils.py
     - data/raw
     params:
     - hybrid_pipeline
     - mediapipe
+    - segment_rules
+    - crop_overrides
     outs:
     - data/Data_Normalized_Hybrid:
         persist: true
@@ -77,19 +81,18 @@ stages:
     outs:
     - models/tcn_hybrid.h5
 
-  # eval_hybrid:
-  #   cmd: python src/evaluate.py --type hybrid
-  #   deps:
-  #     - src/evaluate.py
-  #     - models/tcn_hybrid.h5
-  #     - data/Data_Normalized_Hybrid
-  #     - data/expert_templates.npz
-  #   metrics:
-  #     - dvclive/hybrid_metrics.json:
-  #         cache: false
-  #   plots:
-  #     - dvclive/hybrid_confusion_matrix.png:
-  #         cache: false
+  eval_hybrid:
+    cmd: python src/evaluate.py --type hybrid
+    deps:
+    - src/evaluate.py
+    - models/tcn_hybrid.h5
+    - data/Data_Normalized_Hybrid
+    metrics:
+    - dvclive/hybrid_metrics.json:
+        cache: false
+    plots:
+    - dvclive/hybrid_confusion_matrix.png:
+        cache: false
 metrics:
 - dvclive/metrics.json
 plots:

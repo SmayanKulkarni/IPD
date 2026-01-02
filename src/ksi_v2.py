@@ -579,17 +579,25 @@ class EnhancedKSI:
     Combines all advanced components for research-grade analysis.
     """
     
-    def __init__(self, fps: float = 30.0):
+    def __init__(self, fps: float = 30.0, contact_window_pre_frames: int = 18,
+                 contact_window_post_frames: int = 18, bootstrap_min: int = 50,
+                 bootstrap_max: int = 200, ranking_margin: float = 0.05):
         self.fps = fps
         self.segmenter = ShotPhaseSegmenter(fps)
         self.attention = TemporalAttention()
         self.confidence_filter = LandmarkConfidenceFilter()
+        self.contact_window_pre = contact_window_pre_frames
+        self.contact_window_post = contact_window_post_frames
+        self.bootstrap_min = bootstrap_min
+        self.bootstrap_max = bootstrap_max
+        self.ranking_margin = ranking_margin
     
     def calculate(self, expert_landmarks: np.ndarray, 
                  user_landmarks: np.ndarray,
                  weights: Dict[str, float],
                  expert_visibility: Optional[np.ndarray] = None,
-                 user_visibility: Optional[np.ndarray] = None) -> KSIResult:
+                 user_visibility: Optional[np.ndarray] = None,
+                 baseline_ksi: Optional[float] = None) -> KSIResult:
         """
         Calculate comprehensive KSI analysis.
         
@@ -614,51 +622,58 @@ class EnhancedKSI:
         if len(expert_filtered) < 10 or len(user_filtered) < 10:
             return self._empty_result("Insufficient valid frames for analysis")
         
-        # Step 2: Extract features
-        expert_features = extract_sequence_features(expert_filtered)
-        user_features = extract_sequence_features(user_filtered)
-        
-        # Step 3: Segment shot phases
+        # Step 2: Segment shot phases (pre-window) to locate contact
         expert_phases = self.segmenter.segment(expert_filtered)
         user_phases = self.segmenter.segment(user_filtered)
         
-        # Step 4: DTW alignment
+        # Step 3: Apply contact-centered windowing
+        expert_windowed, expert_phases = self._apply_contact_window(expert_filtered, expert_phases)
+        user_windowed, user_phases = self._apply_contact_window(user_filtered, user_phases)
+        
+        if len(expert_windowed) < 5 or len(user_windowed) < 5:
+            return self._empty_result("Insufficient frames after contact windowing")
+        
+        # Step 4: Extract features on windowed sequences
+        expert_features = extract_sequence_features(expert_windowed)
+        user_features = extract_sequence_features(user_windowed)
+        
+        # Step 5: DTW alignment
         expert_aligned, user_aligned, dtw_distance = dynamic_time_warping_optimized(
             expert_features, user_features
         )
         
-        # Step 5: Compute attention weights
+        # Step 6: Compute attention weights
         attention_weights = self.attention.compute_attention_weights(
             len(expert_aligned), expert_phases
         )
         
-        # Step 6: Calculate component scores
+        # Step 7: Calculate component scores
         s_pose = self._calculate_pose_similarity(expert_aligned, user_aligned, attention_weights)
         s_velocity = self._calculate_velocity_similarity(expert_aligned, user_aligned, attention_weights)
         s_acceleration = self._calculate_acceleration_similarity(expert_aligned, user_aligned, attention_weights)
         s_jerk = self._calculate_jerk_similarity(expert_aligned, user_aligned, attention_weights)
         
-        # Step 7: Per-joint error analysis
+        # Step 8: Per-joint error analysis
         per_joint_errors = self._analyze_per_joint_errors(
             expert_aligned, user_aligned, attention_weights, expert_phases
         )
         
-        # Step 8: Phase-specific scores
+        # Step 9: Phase-specific scores
         phase_scores = self._calculate_phase_scores(
             expert_aligned, user_aligned, expert_phases
         )
         
-        # Step 9: Velocity analysis
+        # Step 10: Velocity analysis
         velocity_analysis = self._analyze_velocity_profile(
             expert_aligned, user_aligned, expert_phases
         )
         
-        # Step 10: Confidence estimation
+        # Step 11: Confidence estimation
         confidence = self._estimate_confidence(
             expert_aligned, user_aligned, len(user_valid_idx) / len(user_landmarks)
         )
         
-        # Step 11: Weighted KSI total
+        # Step 12: Weighted KSI total
         ksi_total = (
             weights['pose'] * s_pose +
             weights['velocity'] * s_velocity +
@@ -669,6 +684,10 @@ class EnhancedKSI:
         ksi_weighted = self._calculate_weighted_ksi(
             expert_aligned, user_aligned, weights, attention_weights
         )
+
+        ranking_hinge = 0.0
+        if baseline_ksi is not None:
+            ranking_hinge = self._ranking_hinge_loss(ksi_total, baseline_ksi)
         
         # Generate initial recommendations
         recommendations = self._generate_recommendations(per_joint_errors, phase_scores, velocity_analysis)
@@ -681,7 +700,8 @@ class EnhancedKSI:
                 'velocity': float(s_velocity),
                 'acceleration': float(s_acceleration),
                 'jerk': float(s_jerk),
-                'dtw_distance': float(dtw_distance)
+                'dtw_distance': float(dtw_distance),
+                'ranking_hinge': float(ranking_hinge)
             },
             per_joint_errors=per_joint_errors,
             phase_scores=phase_scores,
@@ -695,6 +715,42 @@ class EnhancedKSI:
             confidence=confidence,
             recommendations=recommendations
         )
+
+    def _apply_contact_window(self, landmarks_sequence: np.ndarray,
+                              phases: Dict[str, Tuple[int, int]]) -> Tuple[np.ndarray, Dict[str, Tuple[int, int]]]:
+        """
+        Focus analysis on a tight window around contact to reduce noise and compute load.
+        """
+        n_frames = len(landmarks_sequence)
+        if n_frames == 0:
+            return landmarks_sequence, phases
+
+        contact_phase = phases.get(ShotPhase.CONTACT.value)
+        if contact_phase and contact_phase[0] < contact_phase[1]:
+            contact_center = (contact_phase[0] + contact_phase[1]) // 2
+        else:
+            contact_center = n_frames // 2
+        
+        start = max(0, contact_center - self.contact_window_pre)
+        end = min(n_frames, contact_center + self.contact_window_post)
+        if end - start < 5:  # Fallback to avoid too-short slices
+            return landmarks_sequence, phases
+        
+        windowed = landmarks_sequence[start:end]
+        adjusted_phases = {}
+        for phase_name, (p_start, p_end) in phases.items():
+            adj_start = max(0, p_start - start)
+            adj_end = max(0, p_end - start)
+            adj_start = min(len(windowed), adj_start)
+            adj_end = min(len(windowed), adj_end)
+            if adj_start < adj_end:
+                adjusted_phases[phase_name] = (adj_start, adj_end)
+        
+        if ShotPhase.CONTACT.value not in adjusted_phases:
+            center = len(windowed) // 2
+            adjusted_phases[ShotPhase.CONTACT.value] = (max(0, center - 1), min(len(windowed), center + 1))
+        
+        return windowed, adjusted_phases
     
     def _calculate_pose_similarity(self, expert: np.ndarray, user: np.ndarray,
                                    weights: np.ndarray) -> float:
@@ -823,9 +879,10 @@ class EnhancedKSI:
                     critical_phase = ShotPhase(phase_name)
                     break
             
-            # Bootstrap confidence interval
+            # Adaptive bootstrap confidence interval
+            n_bootstrap = min(self.bootstrap_max, max(self.bootstrap_min, len(error_trajectory) * 3))
             bootstrap_errors = []
-            for _ in range(100):
+            for _ in range(n_bootstrap):
                 idx = np.random.choice(len(error_trajectory), size=len(error_trajectory), replace=True)
                 bootstrap_errors.append(np.mean(error_trajectory[idx]))
             ci_lower = float(np.percentile(bootstrap_errors, 2.5))
@@ -913,8 +970,8 @@ class EnhancedKSI:
         """
         Estimate confidence of KSI calculation.
         """
-        # Bootstrap variance
-        n_bootstrap = 50
+        # Adaptive bootstrap variance
+        n_bootstrap = min(self.bootstrap_max, max(self.bootstrap_min, len(expert) * 2))
         bootstrap_ksi = []
         
         for _ in range(n_bootstrap):
@@ -933,13 +990,21 @@ class EnhancedKSI:
             if sims:
                 bootstrap_ksi.append(np.mean(sims))
         
+        mean_ksi = float(np.mean(bootstrap_ksi)) if bootstrap_ksi else 0.0
+        std_ksi = float(np.std(bootstrap_ksi)) if bootstrap_ksi else 1.0
+        ci_lower = float(np.percentile(bootstrap_ksi, 2.5)) if bootstrap_ksi else 0.0
+        ci_upper = float(np.percentile(bootstrap_ksi, 97.5)) if bootstrap_ksi else 1.0
+        uncertainty = (ci_upper - ci_lower) / (abs(mean_ksi) + 1e-6)
+        
         return {
-            'mean': float(np.mean(bootstrap_ksi)) if bootstrap_ksi else 0.0,
-            'std': float(np.std(bootstrap_ksi)) if bootstrap_ksi else 1.0,
-            'ci_95_lower': float(np.percentile(bootstrap_ksi, 2.5)) if bootstrap_ksi else 0.0,
-            'ci_95_upper': float(np.percentile(bootstrap_ksi, 97.5)) if bootstrap_ksi else 1.0,
+            'mean': mean_ksi,
+            'std': std_ksi,
+            'ci_95_lower': ci_lower,
+            'ci_95_upper': ci_upper,
+            'uncertainty_scalar': float(uncertainty),
             'valid_frame_ratio': float(valid_frame_ratio),
-            'reliable': float(np.std(bootstrap_ksi)) < 0.1 if bootstrap_ksi else False
+            'reliable': (std_ksi < 0.1 and uncertainty < 1.0) if bootstrap_ksi else False,
+            'n_bootstrap': int(n_bootstrap)
         }
     
     def _calculate_weighted_ksi(self, expert: np.ndarray, user: np.ndarray,
@@ -960,6 +1025,14 @@ class EnhancedKSI:
                 frame_ksi.append(0.0)
         
         return np.sum(frame_ksi) / np.sum(attention)
+
+    def _ranking_hinge_loss(self, user_score: float, baseline_score: float) -> float:
+        """
+        Margin-based ranking hinge to compare user vs. baseline/reference.
+        Positive when user underperforms the baseline by more than margin.
+        """
+        gap = user_score - baseline_score
+        return float(max(0.0, self.ranking_margin - gap))
     
     def _generate_recommendations(self, errors: Dict[str, JointError],
                                   phase_scores: Dict, velocity: Dict) -> List[str]:

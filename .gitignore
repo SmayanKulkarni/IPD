@@ -1,6 +1,10 @@
-data/
 Data_Normalized/
 Data_Normalized_Hybrid/
 mlruns/
 dvclive/
 .vscode/
+
+# Python bytecode / caches
+__pycache__/
+*.py[cod]
+*$py.class

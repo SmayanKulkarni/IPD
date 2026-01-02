@@ -42,9 +42,12 @@ Elevate the badminton shot correction pipeline with SOTA action-quality assessme
 - Ablations: pose-only vs pose+RGB; ranking on/off; phase tokens on/off; contact-centered vs fixed windows; delay loss on/off; bootstrap CI sizes (100/500/1000).
 - Goal: +0.03–0.05 Spearman’s ρ vs current KSI + NL coach; tighter confidence intervals.
 
-## Compute & Deployment
-- Train: Single 24–32GB GPU; FP16 + grad accumulation (2–4); batch ≈16 pose-only or ≈8 pose+RGB; 30–50 epochs post warm-start.
-- Inference: Pose-only default; trigger RGB only if quality <0.6 or user requests deep review. Export ONNX/TensorRT for transformer-lite head if latency-critical. Favor QAT-friendly ops for INT8.
+## Compute & Deployment (12GB profile)
+- Train: Single 12GB GPU; FP16/AMP + grad accumulation (2–3). Batch ≈8–12 pose-only; if OOM, drop to 6–8 with accumulation. Windows 32–48 frames, contact-centered ±16–20 frames. Prefer lighter ST-GCN/2s-AGCN widths and 2–3 transformer blocks.
+- Ranking pairs: Limit to 1 pair per sample (small pair batches) to stay within VRAM.
+- Inference: Pose-only default. Trigger RGB only if quality <0.6 or on explicit request; use lightweight RGB head. Export ONNX/TensorRT for transformer-lite head; use QAT-friendly ops for INT8.
+- Bootstrap CI: Adaptive, start at 50 samples; expand to 200 max if CI width is large to control latency/memory.
+- Memory aids: Activation checkpointing on transformer neck if needed; pin memory, moderate num_workers (2–4).
 
 ## Actionable Pipeline Upgrades
 - Ranking supervision with expert/user pairs.
@@ -60,6 +63,5 @@ Elevate the badminton shot correction pipeline with SOTA action-quality assessme
 - Safety/guardrails: OOD pose checks, re-record prompts.
 
 ## Open Inputs Needed
-- GPU spec (e.g., single 24GB?) to lock batch/window sizes.
-- Whether to stay pose-only or allow conditional RGB.
-- Target latency (CPU-only vs GPU real-time).
+- Confirm pose-only default (RGB only when quality is low or on request).
+- Target latency (CPU-only vs GPU real-time) to size transformer-lite export.

@@ -6,7 +6,7 @@ import mediapipe as mp
 import gc
 from tqdm import tqdm
 from collections import deque
-from utils import normalize_pose
+from utils import normalize_pose, should_skip_crop, get_segment_bounds, resolve_crop_config_for_video
 
 def get_pose_model(mp_config):
     """Helper to initialize MediaPipe Pose."""
@@ -17,7 +17,7 @@ def get_pose_model(mp_config):
         min_tracking_confidence=mp_config['min_tracking_confidence']
     )
 
-def process_video_streaming(video_path, output_dir, crop_config, mp_config, seq_len, stride):
+def process_video_streaming(video_path, output_dir, crop_config, mp_config, seq_len, stride, segment_rules=None):
     """
     Processes video frame-by-frame and saves windows immediately.
     Uses O(1) memory relative to video length.
@@ -31,10 +31,21 @@ def process_video_streaming(video_path, output_dir, crop_config, mp_config, seq_
         return
 
     cap = cv2.VideoCapture(video_path)
-    fps = cap.get(cv2.CAP_PROP_FPS)
+    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     
+    # Determine the segment bounds (start frame and number of frames)
+    start_frame, tail_frames = get_segment_bounds(video_path, fps, total_frames, default_seconds=1.75, segment_cfg=segment_rules)
+    cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
+    
+    # Decide whether to skip cropping for files with the (N) naming pattern
+    skip_crop = should_skip_crop(filename)
+
     # Rolling buffer to hold exactly 'seq_len' frames
     window_buffer = deque(maxlen=seq_len)
+
+    zeros_pose = np.zeros(99, dtype=np.float32)
+    last_pose = None
     
     # Initialize MediaPipe (Local scope to ensure cleanup)
     pose = get_pose_model(mp_config)
@@ -43,18 +54,31 @@ def process_video_streaming(video_path, output_dir, crop_config, mp_config, seq_
     saved_count = 0
     
     try:
-        while True:
+        while frame_idx < int(tail_frames):
             ret, frame = cap.read()
-            if not ret: break
+            if not ret:
+                break
             
-            # Crop
-            h, w = frame.shape[:2]
-            frame_cropped = frame[
-                int(h*crop_config['top']):h-int(h*crop_config['bottom']),
-                int(w*crop_config['left']):w-int(w*crop_config['right'])
-            ]
-            
-            if frame_cropped.size == 0: continue
+            # Crop (skip if filename matches the '(N)' pattern)
+            if skip_crop:
+                frame_cropped = frame
+            else:
+                h, w = frame.shape[:2]
+                frame_cropped = frame[
+                    int(h*crop_config['top']):h-int(h*crop_config['bottom']),
+                    int(w*crop_config['left']):w-int(w*crop_config['right'])
+                ]
+                if frame_cropped.size == 0:
+                    pose_vec = last_pose if last_pose is not None else zeros_pose
+                    window_buffer.append(pose_vec)
+                    if len(window_buffer) == seq_len and ((frame_idx - (seq_len - 1)) % stride == 0):
+                        save_path = os.path.join(output_dir, f"{file_id}_win_{saved_count}.npz")
+                        np.savez(save_path, features=np.array(window_buffer), fps=fps)
+                        saved_count += 1
+                    frame_idx += 1
+                    del frame
+                    del frame_cropped
+                    continue
 
             # Process
             # Pass by reference to avoid copying large arrays
@@ -67,30 +91,19 @@ def process_video_streaming(video_path, output_dir, crop_config, mp_config, seq_
             del image_rgb
 
             if res.pose_world_landmarks:
-                lm = np.array([[l.x, l.y, l.z] for l in res.pose_world_landmarks.landmark])
-                norm_lm = normalize_pose(lm).flatten()
-                window_buffer.append(norm_lm)
-                
-                # Check if we have a full window and hit the stride
-                if len(window_buffer) == seq_len:
-                    # We align stride logic to the frame index
-                    # Logic: Use this window if (frame_idx - seq_len) % stride == 0
-                    # But since we just filled it, we essentially check if we should save NOW.
-                    
-                    # Using a simple counter for saved windows is safer for streaming
-                    frames_since_last_save = frame_idx - ((saved_count * stride) + (seq_len - 1))
-                    
-                    # Initial save (when buffer just fills)
-                    if saved_count == 0:
-                        should_save = True
-                    # Subsequent saves based on stride
-                    else:
-                        should_save = (frames_since_last_save >= stride)
+                lm = np.array([[l.x, l.y, l.z] for l in res.pose_world_landmarks.landmark], dtype=np.float32)
+                pose_vec = normalize_pose(lm).flatten().astype(np.float32)
+                last_pose = pose_vec
+            else:
+                pose_vec = last_pose if last_pose is not None else zeros_pose
 
-                    if should_save:
-                        save_path = os.path.join(output_dir, f"{file_id}_win_{saved_count}.npz")
-                        np.savez(save_path, features=np.array(window_buffer), fps=fps)
-                        saved_count += 1
+            window_buffer.append(pose_vec)
+
+            # Save windows on a fixed stride relative to the seeked start_frame
+            if len(window_buffer) == seq_len and ((frame_idx - (seq_len - 1)) % stride == 0):
+                save_path = os.path.join(output_dir, f"{file_id}_win_{saved_count}.npz")
+                np.savez(save_path, features=np.array(window_buffer), fps=fps)
+                saved_count += 1
             
             frame_idx += 1
 
@@ -106,6 +119,8 @@ def main():
     with open("params.yaml") as f: params = yaml.safe_load(f)
     cfg = params['pose_pipeline']
     mp_cfg = params['mediapipe']
+    segment_rules = params.get('segment_rules', {})
+    crop_overrides = params.get('crop_overrides', {})
     raw_dir = params['base']['raw_data_path']
     out_dir = cfg['data_path']
     
@@ -118,16 +133,19 @@ def main():
         if not os.path.isdir(cls_in): continue
         os.makedirs(cls_out, exist_ok=True)
         
-        videos = [v for v in os.listdir(cls_in) if v.endswith(('.mp4', '.avi', '.mov'))]
+        videos = [v for v in os.listdir(cls_in) if v.lower().endswith(('.mp4', '.avi', '.mov', '.webm'))]
         
         for i, vid in enumerate(tqdm(videos, desc=f"Pose Prep {cls}")):
+            video_path = os.path.join(cls_in, vid)
+            crop_cfg = resolve_crop_config_for_video(video_path, cfg['crop_config'], crop_overrides)
             process_video_streaming(
-                os.path.join(cls_in, vid),
+                video_path,
                 cls_out,
-                cfg['crop_config'],
+                crop_cfg,
                 mp_cfg,
                 cfg['sequence_length'],
-                cfg['stride']
+                cfg['stride'],
+                segment_rules
             )
             
             # Aggressive Garbage Collection every 10 videos to prevent memory creep

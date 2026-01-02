@@ -39,19 +39,107 @@ stages:
     deps:
     - path: data/raw
       hash: md5
-      md5: 8dd73e8e67625de2e804d5504a46159a.dir
-      size: 1315787364
-      nfiles: 836
+      md5: b8c7603c23fb1528b9e28f7c7621f87d.dir
+      size: 754972081
+      nfiles: 556
     - path: src/preprocess_pose.py
       hash: md5
-      md5: 0e9cac414ee49606864a5163496076a7
-      size: 4840
+      md5: 4856b172fb9d193d7cb7aa017946c2b5
+      size: 5847
     - path: src/utils.py
       hash: md5
-      md5: 5fa83e3740ca4d68c68cf141db23abac
-      size: 1424
+      md5: c7d3df498d22dc40c96332eb690370ff
+      size: 6187
     params:
       params.yaml:
+        crop_overrides:
+          forehand_drive:
+          - start: 1
+            end: 24
+            bottom: 0.5
+          - start: 24
+            end: 42
+            bottom: 0.45
+          - start: 42
+            end: 58
+            bottom: 0.4
+          - start: 58
+            end: 88
+            bottom: 0.4
+          - start: 88
+            end: 100
+            bottom: 0.5
+          backhand_drive:
+          - start: 1
+            end: 38
+            bottom: 0.45
+          - start: 38
+            end: 100
+            bottom: 0.4
+          backhand_net_shot:
+          - start: 1
+            end: 6
+            bottom: 0.5
+          - start: 7
+            end: 34
+            bottom: 0.4
+          - start: 35
+            end: 44
+            bottom: 0.35
+          - start: 45
+            end: 70
+            bottom: 0.45
+          - start: 71
+            end: 100
+            bottom: 0.35
+          forehand_clear:
+          - start: 1
+            end: 27
+            bottom: 0.48
+          - start: 28
+            end: 98
+            bottom: 0.4
+          - start: 99
+            end: 100
+            bottom: 0.45
+          forehand_lift:
+          - start: 1
+            end: 25
+            bottom: 0.4
+          - start: 26
+            end: 38
+            bottom: 0.45
+          - start: 39
+            end: 47
+            bottom: 0.37
+          - start: 48
+            end: 59
+            bottom: 0.4
+          - start: 60
+            end: 72
+            bottom: 0.45
+          - start: 73
+            end: 100
+            bottom: 0.37
+          forehand_net_shot:
+          - start: 1
+            end: 11
+            bottom: 0.5
+          - start: 11
+            end: 42
+            bottom: 0.4
+          - start: 43
+            end: 51
+            bottom: 0.37
+          - start: 52
+            end: 63
+            bottom: 0.4
+          - start: 64
+            end: 67
+            bottom: 0.43
+          - start: 68
+            end: 100
+            bottom: 0.35
         mediapipe:
           model_complexity: 1
           min_detection_confidence: 0.3
@@ -64,51 +152,180 @@ stages:
           batch_size: 16
           epochs: 80
           crop_config:
-            top: 0.1
-            bottom: 0.45
+            top: 0.13
+            bottom: 0.35
             left: 0.25
             right: 0.25
+        segment_rules:
+          default_seconds: 1.75
+          tail_seconds: 2.0
+          tail_shots:
+          - forehand_clear
+          middle_shots:
+            forehand_lift: 2.0
     outs:
     - path: data/Data_Normalized
       hash: md5
-      md5: 1f04e7d5142b577a520e5ee021942d9a.dir
-      size: 95911884
-      nfiles: 2979
+      md5: 4ee0c32864a69c6f5aa20db85d38d5fa.dir
+      size: 96304428
+      nfiles: 3003
   preprocess_hybrid:
     cmd: python src/preprocess_hybrid.py
     deps:
     - path: data/raw
       hash: md5
-      md5: 8dd73e8e67625de2e804d5504a46159a.dir
-      size: 1315787364
-      nfiles: 836
+      md5: b8c7603c23fb1528b9e28f7c7621f87d.dir
+      size: 754972081
+      nfiles: 556
     - path: src/features.py
       hash: md5
-      md5: f9ffe224cb70c02f44598e3049bee37f
-      size: 3487
+      md5: 2b67e870c3c32c4e641f9e27c66c0073
+      size: 10167
     - path: src/preprocess_hybrid.py
       hash: md5
-      md5: 543d33de9b8af219509c85c81134b3fb
-      size: 3350
+      md5: efa4c38bb4a5539056b09c549c9fead5
+      size: 5746
+    - path: src/utils.py
+      hash: md5
+      md5: c7d3df498d22dc40c96332eb690370ff
+      size: 6187
     params:
       params.yaml:
+        crop_overrides:
+          forehand_drive:
+          - start: 1
+            end: 24
+            bottom: 0.5
+          - start: 24
+            end: 42
+            bottom: 0.45
+          - start: 42
+            end: 58
+            bottom: 0.4
+          - start: 58
+            end: 88
+            bottom: 0.4
+          - start: 88
+            end: 100
+            bottom: 0.5
+          backhand_drive:
+          - start: 1
+            end: 38
+            bottom: 0.45
+          - start: 38
+            end: 100
+            bottom: 0.4
+          backhand_net_shot:
+          - start: 1
+            end: 6
+            bottom: 0.5
+          - start: 7
+            end: 34
+            bottom: 0.4
+          - start: 35
+            end: 44
+            bottom: 0.35
+          - start: 45
+            end: 70
+            bottom: 0.45
+          - start: 71
+            end: 100
+            bottom: 0.35
+          forehand_clear:
+          - start: 1
+            end: 27
+            bottom: 0.48
+          - start: 28
+            end: 98
+            bottom: 0.4
+          - start: 99
+            end: 100
+            bottom: 0.45
+          forehand_lift:
+          - start: 1
+            end: 25
+            bottom: 0.4
+          - start: 26
+            end: 38
+            bottom: 0.45
+          - start: 39
+            end: 47
+            bottom: 0.37
+          - start: 48
+            end: 59
+            bottom: 0.4
+          - start: 60
+            end: 72
+            bottom: 0.45
+          - start: 73
+            end: 100
+            bottom: 0.37
+          forehand_net_shot:
+          - start: 1
+            end: 11
+            bottom: 0.5
+          - start: 11
+            end: 42
+            bottom: 0.4
+          - start: 43
+            end: 51
+            bottom: 0.37
+          - start: 52
+            end: 63
+            bottom: 0.4
+          - start: 64
+            end: 67
+            bottom: 0.43
+          - start: 68
+            end: 100
+            bottom: 0.35
         hybrid_pipeline:
           data_path: data/Data_Normalized_Hybrid
           model_path: models/tcn_hybrid.h5
           sequence_length: 40
           stride: 5
           batch_size: 8
-          epochs: 120
+          epochs: 250
           cnn_feature_dim: 64
+          cnn_input_size: 224
+          cnn_roi:
+            enabled: true
+            joint_ids:
+            - 11
+            - 12
+            - 13
+            - 14
+            - 15
+            - 16
+            - 23
+            - 24
+            - 25
+            - 26
+            - 27
+            - 28
+            visibility_thresh: 0.3
+            min_joints: 4
+            margin: 0.35
+            min_size_frac: 0.65
+            smoothing: 0.3
+            fallback_full_frame: true
+            use_last_box_on_missing_pose: true
           crop_config:
-            top: 0.1
-            bottom: 0.45
+            top: 0.13
+            bottom: 0.35
             left: 0.25
             right: 0.25
         mediapipe:
           model_complexity: 1
           min_detection_confidence: 0.3
           min_tracking_confidence: 0.3
+        segment_rules:
+          default_seconds: 1.75
+          tail_seconds: 2.0
+          tail_shots:
+          - forehand_clear
+          middle_shots:
+            forehand_lift: 2.0
     outs:
     - path: data/Data_Normalized_Hybrid
       hash: md5
@@ -129,8 +346,8 @@ stages:
       size: 2246
     - path: src/train_hybrid.py
       hash: md5
-      md5: 50b6279750a8d78abb5e90a71be27771
-      size: 3170
+      md5: 1a2fff331f9ee60abfec03ae4ccb64a6
+      size: 4528
     params:
       params.yaml:
         hybrid_pipeline:
@@ -139,34 +356,57 @@ stages:
           sequence_length: 40
           stride: 5
           batch_size: 8
-          epochs: 120
+          epochs: 250
           cnn_feature_dim: 64
+          cnn_input_size: 224
+          cnn_roi:
+            enabled: true
+            joint_ids:
+            - 11
+            - 12
+            - 13
+            - 14
+            - 15
+            - 16
+            - 23
+            - 24
+            - 25
+            - 26
+            - 27
+            - 28
+            visibility_thresh: 0.3
+            min_joints: 4
+            margin: 0.35
+            min_size_frac: 0.65
+            smoothing: 0.3
+            fallback_full_frame: true
+            use_last_box_on_missing_pose: true
           crop_config:
-            top: 0.1
-            bottom: 0.45
+            top: 0.13
+            bottom: 0.35
             left: 0.25
             right: 0.25
     outs:
     - path: models/tcn_hybrid.h5
       hash: md5
-      md5: ce056e71b35a81684ae75215f9bc0cd1
+      md5: 3000c303c2141f39899b7fbb4a3aaafb
       size: 1337320
   train_pose:
     cmd: python src/train_pose.py
     deps:
     - path: data/Data_Normalized
       hash: md5
-      md5: 1f04e7d5142b577a520e5ee021942d9a.dir
-      size: 95911884
-      nfiles: 2979
+      md5: 4ee0c32864a69c6f5aa20db85d38d5fa.dir
+      size: 96304428
+      nfiles: 3003
     - path: src/models.py
       hash: md5
       md5: aed9f3868f3308c24b347a7f281a1233
       size: 2246
     - path: src/train_pose.py
       hash: md5
-      md5: e85cb1bd54d5e2b4f837f87d89a4f513
-      size: 3012
+      md5: 1e927a781d5d5f610e58b62239f8071c
+      size: 4124
     params:
       params.yaml:
         pose_pipeline:
@@ -177,12 +417,62 @@ stages:
           batch_size: 16
           epochs: 80
           crop_config:
-            top: 0.1
-            bottom: 0.45
+            top: 0.13
+            bottom: 0.35
             left: 0.25
             right: 0.25
     outs:
     - path: models/lstm_pose.h5
       hash: md5
-      md5: 8c6f48077ca737ea6c7d98d205bbc6cc
+      md5: 74747f31e87108f6bb063becc709bfdc
       size: 2901832
+  eval_pose:
+    cmd: python src/evaluate.py --type pose
+    deps:
+    - path: data/Data_Normalized
+      hash: md5
+      md5: 4ee0c32864a69c6f5aa20db85d38d5fa.dir
+      size: 96304428
+      nfiles: 3003
+    - path: models/lstm_pose.h5
+      hash: md5
+      md5: 74747f31e87108f6bb063becc709bfdc
+      size: 2901832
+    - path: src/evaluate.py
+      hash: md5
+      md5: 5e35c7823395b95a1f1d64ed85b8b1b6
+      size: 12201
+    outs:
+    - path: dvclive/pose_confusion_matrix.png
+      hash: md5
+      md5: e286f1d02ac6829b47e08536b5d32266
+      size: 36378
+    - path: dvclive/pose_metrics.json
+      hash: md5
+      md5: 4b7054366a3f688eea38eab34611aadd
+      size: 235
+  eval_hybrid:
+    cmd: python src/evaluate.py --type hybrid
+    deps:
+    - path: data/Data_Normalized_Hybrid
+      hash: md5
+      md5: a2eca1359277a0f5223653ca10b37588.dir
+      size: 288015172
+      nfiles: 3937
+    - path: models/tcn_hybrid.h5
+      hash: md5
+      md5: 93f0073d4e5656d042fb1e050c1df639
+      size: 1337320
+    - path: src/evaluate.py
+      hash: md5
+      md5: 336af255375cb05a8c259c47782cd15e
+      size: 11854
+    outs:
+    - path: dvclive/hybrid_confusion_matrix.png
+      hash: md5
+      md5: bc81a869c62772f079046ca79a304750
+      size: 35525
+    - path: dvclive/hybrid_metrics.json
+      hash: md5
+      md5: 36a1c971bd44f823102a271f40941d48
+      size: 236
