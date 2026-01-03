@@ -1,5 +1,4 @@
 import os
-import random
 import yaml
 import numpy as np
 import mlflow
@@ -16,12 +15,6 @@ from mlflow_utils import MLflowRunManager
 def main():
     with open("params.yaml") as f: params = yaml.safe_load(f)
     cfg = params['hybrid_pipeline']
-    
-    # Set random seeds for reproducibility
-    seed = params['base']['random_state']
-    random.seed(seed)
-    np.random.seed(seed)
-    tf.random.set_seed(seed)
     
     # 1. Setup MLflow with Interactive Run Manager
     run_manager = MLflowRunManager("Hybrid_TCN_Experiment")
@@ -44,13 +37,10 @@ def main():
             print(f"❌ Data path {cfg['data_path']} not found.")
             return
 
-        classes = sorted([d for d in os.listdir(cfg['data_path']) 
-                         if os.path.isdir(os.path.join(cfg['data_path'], d))])
+        classes = sorted(os.listdir(cfg['data_path']))
         for i, cls in enumerate(classes):
             path = os.path.join(cfg['data_path'], cls)
             for f in os.listdir(path):
-                if not f.endswith('.npz'):
-                    continue
                 X.append(np.load(os.path.join(path, f))['features'])
                 y.append(i)
         
@@ -59,6 +49,7 @@ def main():
             return
         
         X = np.array(X)
+        y = np.array(y)
         y_cat = to_categorical(y, len(classes))
         
         # 4. Prepare Data (Split CNN vs Pose features)
@@ -66,17 +57,26 @@ def main():
         X_pose = X[..., :-cnn_dim]
         X_cnn = X[..., -cnn_dim:]
         
-        idx_train, idx_test = train_test_split(
-            np.arange(len(X)), 
-            test_size=0.2, 
+        idx_trainval, idx_test, y_trainval_lbl, y_test_lbl = train_test_split(
+            np.arange(len(X)),
+            y,
+            test_size=0.2,
             stratify=y,
+            random_state=params['base']['random_state']
+        )
+
+        idx_train, idx_val, y_train_lbl, y_val_lbl = train_test_split(
+            idx_trainval,
+            y_trainval_lbl,
+            test_size=0.125,  # 10% overall val
+            stratify=y_trainval_lbl,
             random_state=params['base']['random_state']
         )
         
         # Log dataset information
         run_manager.log_dataset_info(
-            X_pose[idx_train], X_pose[idx_test], 
-            y_cat[idx_train], y_cat[idx_test], 
+            X_pose[idx_train], X_pose[idx_val], X_pose[idx_test],
+            y_cat[idx_train], y_cat[idx_val], y_cat[idx_test],
             classes
         )
         
@@ -86,13 +86,10 @@ def main():
         # Log model architecture
         run_manager.log_model_architecture(model)
         
-        # 6. Ensure model directory exists
-        os.makedirs(os.path.dirname(cfg['model_path']), exist_ok=True)
-        
-        # 7. Callbacks
+        # 6. Callbacks
         callbacks = [
             EarlyStopping(
-                patience=15, 
+                patience=25, 
                 restore_best_weights=True,
                 monitor='val_accuracy',
                 verbose=1
@@ -108,6 +105,7 @@ def main():
 
         print("\n🚀 Starting Hybrid-TCN Training...")
         print(f"   Train samples: {len(idx_train)}")
+        print(f"   Val samples: {len(idx_val)}")
         print(f"   Test samples: {len(idx_test)}")
         print(f"   Classes: {classes}")
         print(f"   Pose features: {X_pose.shape[1:]}")
@@ -115,7 +113,7 @@ def main():
         
         history = model.fit(
             [X_cnn[idx_train], X_pose[idx_train]], y_cat[idx_train],
-            validation_data=([X_cnn[idx_test], X_pose[idx_test]], y_cat[idx_test]),
+            validation_data=([X_cnn[idx_val], X_pose[idx_val]], y_cat[idx_val]),
             epochs=cfg['epochs'], 
             batch_size=cfg['batch_size'],
             callbacks=callbacks,
@@ -128,14 +126,11 @@ def main():
         print(f"\n✅ Training finished!")
         print(f"   Best Val Acc: {max(history.history['val_accuracy']):.4f}")
 
-        # 8. Log and Register the Best Model
+        # 7. Log and Register the Best Model
         print("\n📦 Logging and Registering Best Model to MLflow...")
         best_model = tf.keras.models.load_model(cfg['model_path'])
         
-        # NOTE: Signature inference skipped for multi-input Keras models
-        # MLflow's infer_signature() requires TensorSpec inputs, but multi-input
-        # models use list inputs which are incompatible. This is a known limitation.
-        # See: https://github.com/mlflow/mlflow/issues/4067
+        # For multi-input models, skip signature to avoid MLflow compatibility issues
         mlflow.keras.log_model(
             best_model, 
             artifact_path="model", 

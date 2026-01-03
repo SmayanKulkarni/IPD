@@ -16,8 +16,7 @@ except Exception:  # pragma: no cover
 import tensorflow as tf
 
 from features import HybridFeatureExtractor
-from utils import should_skip_crop, resolve_crop_config_for_video, normalize_pose
-from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
+from utils import should_skip_crop, resolve_crop_config_for_video
 
 
 def _load_params(params_path: str) -> dict:
@@ -213,6 +212,8 @@ def main():
                     [[l.x, l.y, l.z] for l in res.pose_world_landmarks.landmark],
                     dtype=np.float32,
                 )
+                from utils import normalize_pose
+
                 pose_flat = normalize_pose(lm).astype(np.float32).flatten()
                 last_pose = pose_flat
             else:
@@ -231,6 +232,8 @@ def main():
 
             img_size = getattr(extractor, "cnn_input_size", 224)
             img = cv2.resize(roi_frame, (img_size, img_size))
+            from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
+
             img = preprocess_input(np.expand_dims(img[..., ::-1], axis=0))
             cnn_feat = extractor.rgb_model.predict(img, verbose=0)[0].astype(np.float32)
 

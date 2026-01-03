@@ -1,27 +1,20 @@
 import os
-import random
 import yaml
 import numpy as np
 import mlflow
 import mlflow.tensorflow
-import tensorflow as tf
+import tensorflow as tf  # <--- Added import
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 from dvclive.keras import DVCLiveCallback
 # Local Import
 from models import build_lstm_pose
-from mlflow_utils import MLflowRunManager
+from mlflow_utils import MLflowRunManager  # <--- NEW: Enhanced MLflow utilities
 
 def main():
     with open("params.yaml") as f: params = yaml.safe_load(f)
     cfg = params['pose_pipeline']
-    
-    # Set random seeds for reproducibility
-    seed = params['base']['random_state']
-    random.seed(seed)
-    np.random.seed(seed)
-    tf.random.set_seed(seed)
     
     # 1. Setup MLflow with Interactive Run Manager
     run_manager = MLflowRunManager("Pose_LSTM_Experiment")
@@ -44,13 +37,10 @@ def main():
             print(f"Data path {cfg['data_path']} not found.")
             return
 
-        classes = sorted([d for d in os.listdir(cfg['data_path']) 
-                         if os.path.isdir(os.path.join(cfg['data_path'], d))])
+        classes = sorted(os.listdir(cfg['data_path']))
         for i, cls in enumerate(classes):
             path = os.path.join(cfg['data_path'], cls)
             for f in os.listdir(path):
-                if not f.endswith('.npz'):
-                    continue
                 X.append(np.load(os.path.join(path, f))['features'])
                 y.append(i)
         
@@ -59,17 +49,30 @@ def main():
             return
         
         X = np.array(X)
+        y = np.array(y)
         y_cat = to_categorical(y, len(classes))
-        
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y_cat, 
-            test_size=0.2, 
+
+        # Train/val/test split: 20% test, 10% val (from remaining)
+        X_trainval, X_test, y_trainval, y_test, y_trainval_lbl, y_test_lbl = train_test_split(
+            X,
+            y_cat,
+            y,
+            test_size=0.2,
             stratify=y,
+            random_state=params['base']['random_state']
+        )
+
+        X_train, X_val, y_train, y_val, _, _ = train_test_split(
+            X_trainval,
+            y_trainval,
+            y_trainval_lbl,
+            test_size=0.125,  # 0.125 of 0.8 = 0.1 overall
+            stratify=y_trainval_lbl,
             random_state=params['base']['random_state']
         )
         
         # Log dataset information
-        run_manager.log_dataset_info(X_train, X_test, y_train, y_test, classes)
+        run_manager.log_dataset_info(X_train, X_val, X_test, y_train, y_val, y_test, classes)
         
         # 4. Build Model
         model = build_lstm_pose(X_train.shape[1:], len(classes))
@@ -77,10 +80,7 @@ def main():
         # Log model architecture
         run_manager.log_model_architecture(model)
         
-        # 5. Ensure model directory exists
-        os.makedirs(os.path.dirname(cfg['model_path']), exist_ok=True)
-        
-        # 6. Callbacks
+        # 5. Callbacks
         callbacks = [
             EarlyStopping(
                 patience=10, 
@@ -99,12 +99,13 @@ def main():
 
         print("\n🚀 Starting Pose-LSTM Training...")
         print(f"   Train samples: {len(X_train)}")
+        print(f"   Val samples: {len(X_val)}")
         print(f"   Test samples: {len(X_test)}")
         print(f"   Classes: {classes}\n")
         
         history = model.fit(
             X_train, y_train, 
-            validation_data=(X_test, y_test),
+            validation_data=(X_val, y_val),
             epochs=cfg['epochs'], 
             batch_size=cfg['batch_size'],
             callbacks=callbacks,

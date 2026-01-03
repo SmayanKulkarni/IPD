@@ -40,6 +40,19 @@ stages:
     outs:
     - models/lstm_pose.h5
 
+  tune_pose:
+    cmd: python src/tune_pose.py --trials 20
+    deps:
+    - src/tune_pose.py
+    - src/models.py
+    - data/Data_Normalized
+    params:
+    - pose_pipeline
+    - base.random_state
+    - mlflow
+    outs:
+    - models/lstm_pose_tuned.h5
+
   eval_pose:
     cmd: python src/evaluate.py --type pose
     deps:
@@ -80,6 +93,19 @@ stages:
     - hybrid_pipeline
     outs:
     - models/tcn_hybrid.h5
+
+  tune_hybrid:
+    cmd: python src/tune_hybrid.py --trials 20
+    deps:
+    - src/tune_hybrid.py
+    - src/models.py
+    - data/Data_Normalized_Hybrid
+    params:
+    - hybrid_pipeline
+    - base.random_state
+    - mlflow
+    outs:
+    - models/tcn_hybrid_tuned.h5
 
   eval_hybrid:
     cmd: python src/evaluate.py --type hybrid

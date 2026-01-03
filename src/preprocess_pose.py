@@ -133,7 +133,7 @@ def main():
         if not os.path.isdir(cls_in): continue
         os.makedirs(cls_out, exist_ok=True)
         
-        videos = [v for v in os.listdir(cls_in) if v.lower().endswith(('.mp4', '.avi', '.mov', '.webm'))]
+        videos = [v for v in os.listdir(cls_in) if v.endswith(('.mp4', '.avi', '.mov'))]
         
         for i, vid in enumerate(tqdm(videos, desc=f"Pose Prep {cls}")):
             video_path = os.path.join(cls_in, vid)

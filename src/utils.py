@@ -26,14 +26,10 @@ def normalize_pose(keypoints_3d):
     proj = np.dot(right_shoulder_vec, new_y) * new_y
     new_x = right_shoulder_vec - proj
     
-    new_x_norm = np.linalg.norm(new_x)
-    if new_x_norm < 1e-6:
-        new_x = np.cross(new_y, [0, 1, 0]) if abs(new_y[0]) > 0.5 else np.cross(new_y, [1, 0, 0])
-        new_x_norm = np.linalg.norm(new_x)
-        if new_x_norm < 1e-6:
-            return centered  # Fallback if still degenerate
+    if np.linalg.norm(new_x) < 1e-6:
+         new_x = np.cross(new_y, [0, 1, 0]) if abs(new_y[0]) > 0.5 else np.cross(new_y, [1, 0, 0])
 
-    new_x /= new_x_norm
+    new_x /= np.linalg.norm(new_x)
     new_z = np.cross(new_x, new_y)
 
     rotation = np.array([new_x, new_y, new_z])

@@ -1,2 +1,4 @@
 /tcn_hybrid.h5
 /lstm_pose.h5
+/lstm_pose_tuned.h5
+/tcn_hybrid_tuned.h5

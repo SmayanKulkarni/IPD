@@ -168,25 +168,28 @@ class MLflowRunManager:
         except:
             return "unknown"
     
-    def log_dataset_info(self, X_train, X_test, y_train, y_test, classes):
-        """Log comprehensive dataset information."""
+    def log_dataset_info(self, X_train, X_val, X_test, y_train, y_val, y_test, classes):
+        """Log comprehensive dataset information including validation split."""
         mlflow.log_params({
             "dataset.train_samples": len(X_train),
+            "dataset.val_samples": len(X_val),
             "dataset.test_samples": len(X_test),
-            "dataset.train_test_split": f"{len(X_train)}/{len(X_test)}",
+            "dataset.train_val_test_split": f"{len(X_train)}/{len(X_val)}/{len(X_test)}",
             "dataset.num_classes": len(classes),
             "dataset.classes": ",".join(classes),
             "dataset.input_shape": str(X_train.shape[1:]),
         })
-        
+
         # Log class distribution
         from collections import Counter
         train_dist = Counter(np.argmax(y_train, axis=1))
+        val_dist = Counter(np.argmax(y_val, axis=1))
         test_dist = Counter(np.argmax(y_test, axis=1))
-        
+
         for i, cls in enumerate(classes):
             mlflow.log_metrics({
                 f"dataset.class_{cls}.train_count": train_dist.get(i, 0),
+                f"dataset.class_{cls}.val_count": val_dist.get(i, 0),
                 f"dataset.class_{cls}.test_count": test_dist.get(i, 0),
             })
     

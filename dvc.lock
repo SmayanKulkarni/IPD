@@ -346,8 +346,8 @@ stages:
       size: 2246
     - path: src/train_hybrid.py
       hash: md5
-      md5: 1a2fff331f9ee60abfec03ae4ccb64a6
-      size: 4528
+      md5: 8cea7514c5c1587953723c5df62fd88a
+      size: 4950
     params:
       params.yaml:
         hybrid_pipeline:
@@ -389,7 +389,7 @@ stages:
     outs:
     - path: models/tcn_hybrid.h5
       hash: md5
-      md5: 3000c303c2141f39899b7fbb4a3aaafb
+      md5: a2befad96266248bb48b48fdd8c97e1a
       size: 1337320
   train_pose:
     cmd: python src/train_pose.py
@@ -405,8 +405,8 @@ stages:
       size: 2246
     - path: src/train_pose.py
       hash: md5
-      md5: 1e927a781d5d5f610e58b62239f8071c
-      size: 4124
+      md5: 5974ae951ae845596ce7603e33f83a25
+      size: 4629
     params:
       params.yaml:
         pose_pipeline:
@@ -424,7 +424,7 @@ stages:
     outs:
     - path: models/lstm_pose.h5
       hash: md5
-      md5: 74747f31e87108f6bb063becc709bfdc
+      md5: 180d8e0a471c432c204c99379cce5c6a
       size: 2901832
   eval_pose:
     cmd: python src/evaluate.py --type pose
@@ -436,7 +436,7 @@ stages:
       nfiles: 3003
     - path: models/lstm_pose.h5
       hash: md5
-      md5: 74747f31e87108f6bb063becc709bfdc
+      md5: 180d8e0a471c432c204c99379cce5c6a
       size: 2901832
     - path: src/evaluate.py
       hash: md5
@@ -445,12 +445,12 @@ stages:
     outs:
     - path: dvclive/pose_confusion_matrix.png
       hash: md5
-      md5: e286f1d02ac6829b47e08536b5d32266
-      size: 36378
+      md5: 08584086a684f5324cebe81ed9715623
+      size: 37598
     - path: dvclive/pose_metrics.json
       hash: md5
-      md5: 4b7054366a3f688eea38eab34611aadd
-      size: 235
+      md5: 65f7ef67ab3d547e181142bf6c0b738b
+      size: 232
   eval_hybrid:
     cmd: python src/evaluate.py --type hybrid
     deps:
@@ -461,18 +461,126 @@ stages:
       nfiles: 3937
     - path: models/tcn_hybrid.h5
       hash: md5
-      md5: 93f0073d4e5656d042fb1e050c1df639
+      md5: a2befad96266248bb48b48fdd8c97e1a
       size: 1337320
     - path: src/evaluate.py
       hash: md5
-      md5: 336af255375cb05a8c259c47782cd15e
-      size: 11854
+      md5: 5e35c7823395b95a1f1d64ed85b8b1b6
+      size: 12201
     outs:
     - path: dvclive/hybrid_confusion_matrix.png
       hash: md5
-      md5: bc81a869c62772f079046ca79a304750
-      size: 35525
+      md5: e207bf26bacb02231593c2084b7ca06a
+      size: 38475
     - path: dvclive/hybrid_metrics.json
       hash: md5
-      md5: 36a1c971bd44f823102a271f40941d48
-      size: 236
+      md5: 742156db1c8f413d461ac40135507798
+      size: 235
+  tune_pose:
+    cmd: python src/tune_pose.py --trials 20
+    deps:
+    - path: data/Data_Normalized
+      hash: md5
+      md5: 4ee0c32864a69c6f5aa20db85d38d5fa.dir
+      size: 96304428
+      nfiles: 3003
+    - path: src/models.py
+      hash: md5
+      md5: aed9f3868f3308c24b347a7f281a1233
+      size: 2246
+    - path: src/tune_pose.py
+      hash: md5
+      md5: fbf84ff8bd79912e467cc7b57800ade5
+      size: 7982
+    params:
+      params.yaml:
+        base.random_state: 42
+        mlflow:
+          tracking_uri: file:./mlruns
+          artifact_location: ./mlartifacts
+          enable_system_metrics: true
+          log_models_to_registry: true
+          auto_name_runs: false
+        pose_pipeline:
+          data_path: data/Data_Normalized
+          model_path: models/lstm_pose.h5
+          sequence_length: 40
+          stride: 5
+          batch_size: 16
+          epochs: 80
+          crop_config:
+            top: 0.13
+            bottom: 0.35
+            left: 0.25
+            right: 0.25
+    outs:
+    - path: models/lstm_pose_tuned.h5
+      hash: md5
+      md5: dbb6840bc925bb905ed332bcb3807548
+      size: 1402128
+  tune_hybrid:
+    cmd: python src/tune_hybrid.py --trials 20
+    deps:
+    - path: data/Data_Normalized_Hybrid
+      hash: md5
+      md5: a2eca1359277a0f5223653ca10b37588.dir
+      size: 288015172
+      nfiles: 3937
+    - path: src/models.py
+      hash: md5
+      md5: aed9f3868f3308c24b347a7f281a1233
+      size: 2246
+    - path: src/tune_hybrid.py
+      hash: md5
+      md5: eedbea347846dc6262c744da13ce6194
+      size: 8785
+    params:
+      params.yaml:
+        base.random_state: 42
+        hybrid_pipeline:
+          data_path: data/Data_Normalized_Hybrid
+          model_path: models/tcn_hybrid.h5
+          sequence_length: 40
+          stride: 5
+          batch_size: 8
+          epochs: 250
+          cnn_feature_dim: 64
+          cnn_input_size: 224
+          cnn_roi:
+            enabled: true
+            joint_ids:
+            - 11
+            - 12
+            - 13
+            - 14
+            - 15
+            - 16
+            - 23
+            - 24
+            - 25
+            - 26
+            - 27
+            - 28
+            visibility_thresh: 0.3
+            min_joints: 4
+            margin: 0.35
+            min_size_frac: 0.65
+            smoothing: 0.3
+            fallback_full_frame: true
+            use_last_box_on_missing_pose: true
+          crop_config:
+            top: 0.13
+            bottom: 0.35
+            left: 0.25
+            right: 0.25
+        mlflow:
+          tracking_uri: file:./mlruns
+          artifact_location: ./mlartifacts
+          enable_system_metrics: true
+          log_models_to_registry: true
+          auto_name_runs: false
+    outs:
+    - path: models/tcn_hybrid_tuned.h5
+      hash: md5
+      md5: 41afdf075415b140d0a0a844da7b6b54
+      size: 883920
