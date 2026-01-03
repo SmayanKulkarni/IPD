@@ -25,10 +25,34 @@ def main():
                 all_ksi.append(np.array([extract_ksi_features(f) for f in lms]))
         
         if all_ksi:
+            # Use first video as reference
             ref = all_ksi[0]
-            aligned = [ref] + [dynamic_time_warping(ref, s)[1] for s in all_ksi[1:]]
-            templates[cls] = np.mean(aligned, axis=0)
+            # DTW-align all other videos to reference
+            aligned = [ref]
+            for s in all_ksi[1:]:
+                _, aligned_seq = dynamic_time_warping(ref, s)
+                # Ensure aligned sequence has same length as reference
+                if len(aligned_seq) != len(ref):
+                    # Resample to match reference length
+                    from scipy.interpolate import interp1d
+                    old_indices = np.linspace(0, 1, len(aligned_seq))
+                    new_indices = np.linspace(0, 1, len(ref))
+                    resampled = np.array([interp1d(old_indices, aligned_seq[:, i], kind='linear')(new_indices) 
+                                         for i in range(aligned_seq.shape[1])]).T
+                    aligned.append(resampled)
+                else:
+                    aligned.append(aligned_seq)
             
-    np.savez(cfg['output_path'], **templates)
+            # Average all aligned sequences
+            templates[cls] = np.mean(np.array(aligned), axis=0)
+            print(f"✓ Generated template for '{cls}' from {len(all_ksi)} videos (shape: {templates[cls].shape})")
+        else:
+            print(f"⚠ No valid videos found for class '{cls}'")
+            
+    if templates:
+        np.savez(cfg['output_path'], **templates)
+        print(f"\n✅ Saved {len(templates)} expert templates to {cfg['output_path']}")
+    else:
+        print("\n❌ No templates generated - no expert videos found!")
 
 if __name__ == "__main__": main()

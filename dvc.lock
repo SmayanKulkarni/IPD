@@ -5,21 +5,21 @@ stages:
     deps:
     - path: data/expert_data
       hash: md5
-      md5: d751713988987e9331980363e24189ce.dir
-      size: 0
-      nfiles: 0
+      md5: 920dfb3fc9a99187a76695b97829e560.dir
+      size: 290106468
+      nfiles: 112
     - path: src/features.py
       hash: md5
-      md5: f9ffe224cb70c02f44598e3049bee37f
-      size: 3487
+      md5: 2b67e870c3c32c4e641f9e27c66c0073
+      size: 10167
     - path: src/generate_templates.py
       hash: md5
-      md5: a00729b0cd737c42c277799c9b08ae85
-      size: 1215
-    - path: src/ksi.py
+      md5: bfc3dedc0af2992219ac5756a5562748
+      size: 2584
+    - path: src/ksi_v2.py
       hash: md5
-      md5: 2c6301e9f10ceab535c7f83913aef364
-      size: 3050
+      md5: 825801940bc3f5f3e9bc3fc9d732b6de
+      size: 43126
     params:
       params.yaml:
         expert_pipeline:
@@ -32,8 +32,8 @@ stages:
     outs:
     - path: data/expert_templates.npz
       hash: md5
-      md5: 76cdb2bad9582d23c1f6f4d868218d6c
-      size: 22
+      md5: 1266a209e0efdab5446e42999aa764ef
+      size: 30872
   preprocess_pose:
     cmd: python src/preprocess_pose.py
     deps:

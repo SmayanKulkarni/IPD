@@ -1,73 +1,21 @@
 stages:
   # --- EXPERT DATA TEMPLATES ---
-  # generate_templates:
-  #   cmd: python src/generate_templates.py
-  #   deps:
-  #     - src/generate_templates.py
-  #     - src/ksi_v2.py
-  #     - src/features.py
-  #     - data/expert_data
-  #   params:
-  #     - expert_pipeline
-  #     - mediapipe
-  #   outs:
-  #     - data/expert_templates.npz
-
-  # --- POSE PIPELINE (Normalized) ---
-  preprocess_pose:
-    cmd: python src/preprocess_pose.py
+  generate_templates:
+    cmd: python src/generate_templates.py
     deps:
-    - src/preprocess_pose.py
-    - src/utils.py
-    - data/raw
+    - src/generate_templates.py
+    - src/ksi_v2.py
+    - src/features.py
+    - data/expert_data
     params:
-    - pose_pipeline
+    - expert_pipeline
     - mediapipe
-    - segment_rules
-    - crop_overrides
     outs:
-    - data/Data_Normalized:
-        persist: true
+    - data/expert_templates.npz
 
-  train_pose:
-    cmd: python src/train_pose.py
-    deps:
-    - src/train_pose.py
-    - src/models.py
-    - data/Data_Normalized
-    params:
-    - pose_pipeline
-    outs:
-    - models/lstm_pose.h5
-
-  tune_pose:
-    cmd: python src/tune_pose.py --trials 20
-    deps:
-    - src/tune_pose.py
-    - src/models.py
-    - data/Data_Normalized
-    params:
-    - pose_pipeline
-    - base.random_state
-    - mlflow
-    outs:
-    - models/lstm_pose_tuned.h5
-
-  eval_pose:
-    cmd: python src/evaluate.py --type pose
-    deps:
-    - src/evaluate.py
-    - models/lstm_pose.h5
-    - data/Data_Normalized
-    metrics:
-    - dvclive/pose_metrics.json:
-        cache: false
-    plots:
-    - dvclive/pose_confusion_matrix.png:
-        cache: false
-
-  # --- HYBRID PIPELINE (TCN) ---
-  preprocess_hybrid:
+  # --- PRODUCTION PIPELINE (TCN HYBRID TUNED) ---
+  # Note: Run `dvc repro preprocess_production -f` to regenerate data with raw landmarks for KSI
+  preprocess_production:
     cmd: python src/preprocess_hybrid.py
     deps:
     - src/preprocess_hybrid.py
@@ -83,41 +31,18 @@ stages:
     - data/Data_Normalized_Hybrid:
         persist: true
 
-  train_hybrid:
-    cmd: python src/train_hybrid.py
-    deps:
-    - src/train_hybrid.py
-    - src/models.py
-    - data/Data_Normalized_Hybrid
-    params:
-    - hybrid_pipeline
-    outs:
-    - models/tcn_hybrid.h5
-
-  tune_hybrid:
-    cmd: python src/tune_hybrid.py --trials 20
-    deps:
-    - src/tune_hybrid.py
-    - src/models.py
-    - data/Data_Normalized_Hybrid
-    params:
-    - hybrid_pipeline
-    - base.random_state
-    - mlflow
-    outs:
-    - models/tcn_hybrid_tuned.h5
-
-  eval_hybrid:
-    cmd: python src/evaluate.py --type hybrid
+  evaluate_production:
+    cmd: python src/evaluate.py --type hybrid --model models/tcn_hybrid_tuned.h5
     deps:
     - src/evaluate.py
-    - models/tcn_hybrid.h5
+    - models/tcn_hybrid_tuned.h5
     - data/Data_Normalized_Hybrid
+    - data/expert_templates.npz
     metrics:
-    - dvclive/hybrid_metrics.json:
+    - dvclive/production_metrics.json:
         cache: false
     plots:
-    - dvclive/hybrid_confusion_matrix.png:
+    - dvclive/production_confusion_matrix.png:
         cache: false
 metrics:
 - dvclive/metrics.json

@@ -20,22 +20,33 @@ from ksi_v2 import (
 from mlflow_utils import MLflowRunManager  # <--- NEW: Enhanced MLflow utilities
 
 
-def evaluate(pipeline_type: str):
+def evaluate(pipeline_type: str, model_path: str = None):
     """
     Evaluate model with enhanced KSI v2 metrics.
     Logs phase scores, confidence intervals, ranking hinge, and component breakdowns.
+    
+    Args:
+        pipeline_type: 'pose' or 'hybrid'
+        model_path: Optional path to model file (overrides params.yaml)
     """
     with open("params.yaml") as f:
         params = yaml.safe_load(f)
     cfg = params[f'{pipeline_type}_pipeline']
     ksi_cfg = params.get('ksi', {'weights': {'pose': 0.5, 'velocity': 0.3, 'acceleration': 0.2}})
     
+    # Use provided model path or default from config
+    if model_path:
+        cfg['model_path'] = model_path
+        run_suffix = f" (custom: {os.path.basename(model_path)})"
+    else:
+        run_suffix = ""
+    
     # Setup MLflow with interactive run manager
     exp_name = "Pose_LSTM_Experiment" if pipeline_type == 'pose' else "Hybrid_TCN_Experiment"
     run_manager = MLflowRunManager(exp_name)
 
     with run_manager.start_interactive_run(
-        default_description=f"Evaluation of {pipeline_type} pipeline with KSI v2.0 metrics"
+        default_description=f"Evaluation of {pipeline_type} pipeline with KSI v2.0 metrics{run_suffix}"
     ):
         # Log evaluation configuration
         mlflow.log_param("evaluation.model_path", cfg['model_path'])
@@ -43,6 +54,7 @@ def evaluate(pipeline_type: str):
         
         # 1. Load Data
         X, y = [], []
+        raw_landmarks = []  # NEW: store raw landmarks for KSI
         if not os.path.exists(cfg['data_path']):
             print(f"Data path {cfg['data_path']} not found")
             return
@@ -53,14 +65,30 @@ def evaluate(pipeline_type: str):
                 continue
             for f in os.listdir(path):
                 if f.endswith('.npz'):
-                    X.append(np.load(os.path.join(path, f))['features'])
+                    data = np.load(os.path.join(path, f))
+                    X.append(data['features'])
                     y.append(i)
+                    # NEW: load raw landmarks if available (for hybrid pipeline KSI)
+                    if 'raw_landmarks' in data:
+                        raw_landmarks.append(data['raw_landmarks'])
+                    else:
+                        raw_landmarks.append(None)
         
         if not X:
             print("No data loaded")
             return
         X, y_cat = np.array(X), to_categorical(y, len(classes))
-        _, X_test, _, y_test = train_test_split(X, y_cat, test_size=0.2, stratify=y, random_state=42)
+        
+        # Split data and raw landmarks together
+        if raw_landmarks and any(lm is not None for lm in raw_landmarks):
+            _, X_test, _, y_test, _, raw_test = train_test_split(
+                X, y_cat, raw_landmarks, test_size=0.2, stratify=y, random_state=42
+            )
+            has_raw_landmarks = True
+        else:
+            _, X_test, _, y_test = train_test_split(X, y_cat, test_size=0.2, stratify=y, random_state=42)
+            raw_test = None
+            has_raw_landmarks = False
         
         # 2. Load Model & Predict
         model = load_model(cfg['model_path'])
@@ -77,6 +105,7 @@ def evaluate(pipeline_type: str):
             sample_pose = X_test
 
         # 3. Enhanced KSI v2 Calculation with contact-centered windowing
+        # NEW: KSI now works with hybrid pipeline if raw_landmarks are available
         template_path = params['expert_pipeline']['output_path']
         ksi_results = {
             'avg_ksi_total': 0.0,
@@ -89,7 +118,12 @@ def evaluate(pipeline_type: str):
             'total_samples': 0
         }
         
-        if os.path.exists(template_path):
+        # Check if we can do KSI evaluation
+        can_do_ksi = os.path.exists(template_path) and (
+            pipeline_type == 'pose' or (pipeline_type == 'hybrid' and has_raw_landmarks)
+        )
+        
+        if can_do_ksi:
             print(f"Expert templates found at {template_path}. Computing KSI metrics...")
             templates = np.load(template_path, allow_pickle=True)
             
@@ -127,8 +161,13 @@ def evaluate(pipeline_type: str):
                 if template_key is None:
                     continue
                 
-                # Reshape to [T, 33, 3]
-                user_lm = sample_pose[i].reshape(-1, 33, 3)
+                # Get user landmarks - use raw_landmarks if available (hybrid), else reshape pose features
+                if pipeline_type == 'hybrid' and raw_test is not None and raw_test[i] is not None:
+                    user_lm = raw_test[i]  # Already (T, 33, 3)
+                else:
+                    # Pose pipeline: reshape from flattened features
+                    user_lm = sample_pose[i].reshape(-1, 33, 3)
+                
                 expert_lm = templates[template_key].reshape(-1, 33, 3)
                 
                 # Calculate enhanced KSI
@@ -175,6 +214,9 @@ def evaluate(pipeline_type: str):
             for comp, scores in component_accumulator.items():
                 if scores:
                     ksi_results['component_scores'][comp] = float(np.mean(scores))
+        elif pipeline_type == 'hybrid' and not has_raw_landmarks:
+            print(f"⚠️  Raw landmarks not found in hybrid data. Run preprocessing again to enable KSI evaluation.")
+            print(f"    (Old data format detected - missing 'raw_landmarks' in .npz files)")
         else:
             print(f"⚠ Expert templates not found at {template_path}. Skipping KSI metrics.")
 
@@ -270,4 +312,6 @@ def evaluate(pipeline_type: str):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--type", choices=['pose', 'hybrid'], required=True)
-    evaluate(parser.parse_args().type)
+    parser.add_argument("--model", type=str, help="Optional: custom model path (overrides params.yaml)")
+    args = parser.parse_args()
+    evaluate(args.type, args.model)

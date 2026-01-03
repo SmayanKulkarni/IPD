@@ -21,7 +21,12 @@ def process_video_streaming(
     segment_rules=None,
     roi_cfg=None,
 ):
-    """Stream video -> fused features -> sliding windows saved to disk."""
+    """Stream video -> fused features -> sliding windows saved to disk.
+    
+    Saves both:
+    - 'features': engineered features (pose + CNN) for model training
+    - 'raw_landmarks': raw (T, 33, 3) pose landmarks for KSI evaluation
+    """
     filename = os.path.basename(video_path)
     file_id = os.path.splitext(filename)[0]
 
@@ -46,10 +51,13 @@ def process_video_streaming(
 
     skip_crop = should_skip_crop(filename)
     zeros_pose = np.zeros(99, dtype=np.float32)
+    zeros_landmarks = np.zeros((33, 3), dtype=np.float32)
     last_pose = None
+    last_landmarks = None
     last_box = None
 
     window_buffer = deque(maxlen=seq_len)
+    landmarks_buffer = deque(maxlen=seq_len)  # NEW: store raw landmarks
     saved_count = 0
     frame_idx = 0
 
@@ -78,8 +86,10 @@ def process_video_streaming(
                 lm = np.array([[l.x, l.y, l.z] for l in res.pose_world_landmarks.landmark], dtype=np.float32)
                 pose_flat = normalize_pose(lm).astype(np.float32).flatten()
                 last_pose = pose_flat
+                last_landmarks = lm.copy()  # NEW: store raw landmarks
             else:
                 pose_flat = last_pose if last_pose is not None else zeros_pose
+                lm = last_landmarks if last_landmarks is not None else zeros_landmarks
 
             # CNN features (optionally pose-guided ROI crop)
             h2, w2 = frame_cropped.shape[:2]
@@ -100,11 +110,18 @@ def process_video_streaming(
 
             fused = np.concatenate([pose_flat, cnn_feat], axis=0)
             window_buffer.append(fused)
+            landmarks_buffer.append(lm)  # NEW: append raw landmarks
 
             # Save windows on fixed stride relative to the segment start
             if len(window_buffer) == seq_len and ((frame_idx - seq_len) % stride == 0):
                 save_path = os.path.join(output_dir, f"{file_id}_win_{saved_count}.npz")
-                np.savez(save_path, features=np.asarray(window_buffer, dtype=np.float32), fps=float(fps))
+                # NEW: save both features and raw_landmarks
+                np.savez(
+                    save_path, 
+                    features=np.asarray(window_buffer, dtype=np.float32),
+                    raw_landmarks=np.asarray(landmarks_buffer, dtype=np.float32),
+                    fps=float(fps)
+                )
                 saved_count += 1
 
             del frame
@@ -115,6 +132,7 @@ def process_video_streaming(
     finally:
         cap.release()
         del window_buffer
+        del landmarks_buffer  # NEW: cleanup
         gc.collect()
 
 
