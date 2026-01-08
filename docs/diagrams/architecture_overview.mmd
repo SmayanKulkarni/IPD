@@ -1,0 +1,16 @@
+flowchart TD
+  RAW["Raw video\ndata/raw/*"]
+  PREP["Preprocess\n(hybrid + pose)"]
+  NORM["Normalized features\n*.npz"]
+  TRAIN["Train/Tune\nTCN (hybrid) + LSTM (pose)"]
+  MODELS["Trained models\nmodels/*.h5"]
+  TRACK["Tracking\nmlruns + dvclive"]
+  INFER["Infer features\nfeatures.py + utils.py"]
+  KSI["KSI scoring\nksi_v2.py + phase_segmentation.py"]
+  COACH["NL coaching\nnatural_language_coach.py"]
+  OUTPUT["Reports\ncoaching_reports"]
+
+  RAW --> PREP --> NORM --> TRAIN --> MODELS --> INFER --> KSI --> COACH --> OUTPUT
+  TRAIN --> TRACK
+  INFER -.-> MediaPipe["MediaPipe Pose"]
+  INFER -.-> OpenCV["OpenCV IO"]

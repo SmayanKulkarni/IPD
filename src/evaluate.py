@@ -18,9 +18,17 @@ from ksi_v2 import (
     ShotPhase,
 )
 from mlflow_utils import MLflowRunManager  # <--- NEW: Enhanced MLflow utilities
+try:
+    from natural_language_coach import generate_coaching_report
+    NLP_AVAILABLE = True
+except ImportError:
+    NLP_AVAILABLE = False
+    print("⚠️  natural_language_coach not available. NLP feedback will be skipped.")
 
 
-def evaluate(pipeline_type: str, model_path: str = None):
+def evaluate(pipeline_type: str, model_path: str = None, generate_nlp_feedback: bool = False, 
+             nlp_skill_level: str = 'intermediate', max_nlp_samples: int = 5, auto_run_name: bool = False,
+             data_path: str = None):
     """
     Evaluate model with enhanced KSI v2 metrics.
     Logs phase scores, confidence intervals, ranking hinge, and component breakdowns.
@@ -28,6 +36,11 @@ def evaluate(pipeline_type: str, model_path: str = None):
     Args:
         pipeline_type: 'pose' or 'hybrid'
         model_path: Optional path to model file (overrides params.yaml)
+        generate_nlp_feedback: Whether to generate natural language coaching reports
+        nlp_skill_level: Skill level for NLP coach ('beginner', 'intermediate', 'advanced', 'expert')
+        max_nlp_samples: Maximum number of samples to generate detailed feedback for
+        auto_run_name: If True, auto-generate MLflow run name without prompting
+        data_path: Optional path to evaluation data (overrides params.yaml)
     """
     with open("params.yaml") as f:
         params = yaml.safe_load(f)
@@ -41,16 +54,31 @@ def evaluate(pipeline_type: str, model_path: str = None):
     else:
         run_suffix = ""
     
+    # Use provided data path or default from config
+    if data_path:
+        cfg['data_path'] = data_path
+    
     # Setup MLflow with interactive run manager
     exp_name = "Pose_LSTM_Experiment" if pipeline_type == 'pose' else "Hybrid_TCN_Experiment"
     run_manager = MLflowRunManager(exp_name)
 
     with run_manager.start_interactive_run(
-        default_description=f"Evaluation of {pipeline_type} pipeline with KSI v2.0 metrics{run_suffix}"
+        default_description=f"Evaluation of {pipeline_type} pipeline with KSI v2.0 metrics{run_suffix}",
+        auto_name=auto_run_name
     ):
         # Log evaluation configuration
         mlflow.log_param("evaluation.model_path", cfg['model_path'])
+        mlflow.log_param("evaluation.data_path", cfg['data_path'])
         mlflow.log_param("evaluation.pipeline_type", pipeline_type)
+        
+        # Display what we're evaluating on
+        print(f"\n{'='*70}")
+        print(f"📊 EVALUATION CONFIGURATION")
+        print(f"{'='*70}")
+        print(f"Pipeline: {pipeline_type}")
+        print(f"Model: {cfg['model_path']}")
+        print(f"Data: {cfg['data_path']}")
+        print(f"{'='*70}\n")
         
         # 1. Load Data
         X, y = [], []
@@ -127,6 +155,33 @@ def evaluate(pipeline_type: str, model_path: str = None):
             print(f"Expert templates found at {template_path}. Computing KSI metrics...")
             templates = np.load(template_path, allow_pickle=True)
             
+            # Check template format - detect if raw landmarks or enhanced features
+            sample_template_key = next((k for k in templates.files if not k.startswith('_')), None)
+            if sample_template_key is None:
+                print(f"⚠ No valid templates found in {template_path}")
+                can_do_ksi = False
+            else:
+                sample_template = templates[sample_template_key]
+                # Raw landmarks: (T, 33, 3) or (T, 99) flattened
+                # Enhanced features: (T, 32)
+                template_is_raw_landmarks = (
+                    sample_template.ndim == 3 and sample_template.shape[1:] == (33, 3)
+                ) or (
+                    sample_template.ndim == 2 and sample_template.shape[1] == 99
+                )
+                template_is_enhanced = sample_template.ndim == 2 and sample_template.shape[1] == 32
+                
+                if template_is_enhanced:
+                    print(f"⚠ Templates are in 32-feature format (KSI v2 features), not raw landmarks.")
+                    print(f"   KSI calculation requires raw landmarks (T, 33, 3). Regenerate templates with raw landmarks.")
+                    can_do_ksi = False
+                elif not template_is_raw_landmarks:
+                    print(f"⚠ Unknown template format: shape={sample_template.shape}. Expected (T, 33, 3) or (T, 99).")
+                    can_do_ksi = False
+                else:
+                    print(f"   Template format: {'(T, 33, 3)' if sample_template.ndim == 3 else '(T, 99)'} - OK")
+        
+        if can_do_ksi:
             # Initialize enhanced KSI calculator
             ksi_calc = EnhancedKSI(
                 fps=params.get('fps', 30.0),
@@ -145,30 +200,60 @@ def evaluate(pipeline_type: str, model_path: str = None):
             component_accumulator = {'pose': [], 'velocity': [], 'acceleration': [], 'jerk': []}
             reliable_count = 0
             
+            # Store individual results for NLP feedback
+            individual_results = [] if generate_nlp_feedback else None
+            
             # Sample for speed (evaluate up to 50 items)
             n_samples = min(50, len(sample_pose))
+            evaluated_count = 0  # Track actually evaluated samples
+            skipped_templates = set()  # Track missing templates to report once
+            
             for i in range(n_samples):
                 cls = classes[np.argmax(y_test[i])]
-                template_key = cls if cls in templates else None
                 
-                # Try alternate key formats
-                if template_key is None:
+                # NEW: Try main template, then variants, prioritizing main
+                template_key = None
+                if cls in templates:
+                    template_key = cls
+                elif f'{cls}_variant1' in templates:
+                    # If only variants exist, use variant1 (best quality)
+                    template_key = f'{cls}_variant1'
+                else:
+                    # Try any key containing the class name
                     for key in templates.files:
-                        if cls in key:
+                        if cls in key and not key.startswith('_'):
                             template_key = key
                             break
                 
                 if template_key is None:
+                    if cls not in skipped_templates:
+                        skipped_templates.add(cls)
                     continue
                 
                 # Get user landmarks - use raw_landmarks if available (hybrid), else reshape pose features
                 if pipeline_type == 'hybrid' and raw_test is not None and raw_test[i] is not None:
                     user_lm = raw_test[i]  # Already (T, 33, 3)
                 else:
-                    # Pose pipeline: reshape from flattened features
-                    user_lm = sample_pose[i].reshape(-1, 33, 3)
+                    # Pose pipeline: reshape from flattened features (T, 99) -> (T, 33, 3)
+                    try:
+                        user_lm = sample_pose[i].reshape(-1, 33, 3)
+                    except ValueError as e:
+                        print(f"⚠ Cannot reshape pose features to landmarks: {sample_pose[i].shape} -> (T, 33, 3)")
+                        continue
                 
-                expert_lm = templates[template_key].reshape(-1, 33, 3)
+                # Load expert template and reshape if needed
+                expert_template = templates[template_key]
+                try:
+                    if expert_template.ndim == 3 and expert_template.shape[1:] == (33, 3):
+                        expert_lm = expert_template  # Already (T, 33, 3)
+                    elif expert_template.ndim == 2 and expert_template.shape[1] == 99:
+                        expert_lm = expert_template.reshape(-1, 33, 3)  # (T, 99) -> (T, 33, 3)
+                    else:
+                        print(f"⚠ Cannot convert template '{template_key}' shape {expert_template.shape} to landmarks")
+                        continue
+                except ValueError as e:
+                    print(f"⚠ Template reshape failed for '{template_key}': {e}")
+                    continue
                 
                 # Calculate enhanced KSI
                 result = ksi_calc.calculate(
@@ -198,6 +283,24 @@ def evaluate(pipeline_type: str, model_path: str = None):
                 for comp in ['pose', 'velocity', 'acceleration', 'jerk']:
                     if comp in result.components:
                         component_accumulator[comp].append(result.components[comp])
+                
+                # Store individual result for NLP feedback (only if prediction is correct)
+                if generate_nlp_feedback:
+                    predicted_cls = classes[y_pred[i]] if i < len(y_pred) else None
+                    if predicted_cls == cls:  # Only store correctly predicted samples
+                        individual_results.append({
+                            'sample_idx': i,
+                            'class': cls,
+                            'predicted_class': predicted_cls,
+                            'ksi_result': result,
+                            'ksi_total': result.ksi_total
+                        })
+                
+                evaluated_count += 1
+            
+            # Report skipped templates
+            if skipped_templates:
+                print(f"   ⚠ Missing templates for classes: {sorted(skipped_templates)}")
             
             # Aggregate results
             ksi_results['avg_ksi_total'] = float(np.mean(ksi_totals)) if ksi_totals else 0.0
@@ -205,7 +308,7 @@ def evaluate(pipeline_type: str, model_path: str = None):
             ksi_results['avg_confidence_ci_width'] = float(np.mean(ci_widths)) if ci_widths else 0.0
             ksi_results['avg_uncertainty_scalar'] = float(np.mean(uncertainty_scalars)) if uncertainty_scalars else 0.0
             ksi_results['reliable_count'] = reliable_count
-            ksi_results['total_samples'] = n_samples
+            ksi_results['total_samples'] = evaluated_count  # Use actual evaluated count, not attempted
             
             for phase, scores in phase_score_accumulator.items():
                 if scores:
@@ -214,6 +317,74 @@ def evaluate(pipeline_type: str, model_path: str = None):
             for comp, scores in component_accumulator.items():
                 if scores:
                     ksi_results['component_scores'][comp] = float(np.mean(scores))
+            
+            # Generate natural language coaching reports
+            if generate_nlp_feedback and individual_results and NLP_AVAILABLE:
+                print(f"\n{'='*70}")
+                print(f"GENERATING NATURAL LANGUAGE COACHING FEEDBACK")
+                print(f"{'='*70}")
+                print(f"   Found {len(individual_results)} correctly predicted samples")
+                
+                # DEBUG: Show KSI scores distribution
+                ksi_scores = [r['ksi_total'] for r in individual_results]
+                print(f"   KSI scores range: {min(ksi_scores):.3f} - {max(ksi_scores):.3f}")
+                
+                os.makedirs("coaching_reports", exist_ok=True)
+                
+                # Pick best sample (highest KSI score) - this gives most interesting feedback
+                individual_results.sort(key=lambda x: x['ksi_total'], reverse=True)
+                best_sample = individual_results[0]
+                samples_to_generate = [best_sample]
+                
+                sample = samples_to_generate[0]
+                cls = sample['class']
+                ksi_result = sample['ksi_result']
+                sample_idx = sample['sample_idx']
+                
+                print(f"\n📝 Generating coaching report for: {cls} (KSI: {ksi_result.ksi_total:.3f})")
+                
+                try:
+                    
+                    # Generate simplified coaching report
+                    report = generate_coaching_report(
+                        ksi_result=ksi_result,
+                        shot_type_str=cls,
+                        skill_level_str=nlp_skill_level,
+                        user_name=None,
+                        output_format='text',
+                        simplified=True  # Remove weekly plan, shorten output
+                    )
+                    
+                    # Save report
+                    report_filename = f"coaching_reports/{cls}_ksi{ksi_result.ksi_total:.3f}_report.txt"
+                    with open(report_filename, 'w') as f:
+                        f.write(report)
+                    
+                    print(f"   ✅ Saved: {report_filename}")
+                    
+                    # Also save JSON version
+                    json_report = generate_coaching_report(
+                        ksi_result=ksi_result,
+                        shot_type_str=cls,
+                        skill_level_str=nlp_skill_level,
+                        output_format='json',
+                        simplified=True
+                    )
+                    json_filename = f"coaching_reports/{cls}_ksi{ksi_result.ksi_total:.3f}_report.json"
+                    with open(json_filename, 'w') as f:
+                        f.write(json_report)
+                    
+                    # Log to MLflow
+                    mlflow.log_artifact(report_filename)
+                    print(f"   📊 Logged to MLflow")
+                        
+                except Exception as e:
+                    print(f"   ⚠️ Failed to generate report: {e}")
+                    import traceback
+                    traceback.print_exc()
+                
+                print(f"\n✅ Generated coaching report in coaching_reports/")
+                print(f"{'='*70}\n")
         elif pipeline_type == 'hybrid' and not has_raw_landmarks:
             print(f"⚠️  Raw landmarks not found in hybrid data. Run preprocessing again to enable KSI evaluation.")
             print(f"    (Old data format detected - missing 'raw_landmarks' in .npz files)")
@@ -245,7 +416,9 @@ def evaluate(pipeline_type: str, model_path: str = None):
         plt.title(f"Confusion Matrix - {pipeline_type.upper()}")
         
         os.makedirs("dvclive", exist_ok=True)
-        cm_path = f"dvclive/{pipeline_type}_confusion_matrix.png"
+        # Use production filename for tuned models, pipeline-specific otherwise
+        cm_filename = "production_confusion_matrix.png" if "tuned" in cfg['model_path'] else f"{pipeline_type}_confusion_matrix.png"
+        cm_path = os.path.join("dvclive", cm_filename)
         plt.savefig(cm_path)
         plt.close()
         mlflow.log_artifact(cm_path)
@@ -292,7 +465,12 @@ def evaluate(pipeline_type: str, model_path: str = None):
             "phase_scores": ksi_results['phase_scores'],
             "component_scores": ksi_results['component_scores']
         }
-        with open(f"dvclive/{pipeline_type}_metrics.json", "w") as f:
+        
+        # Determine metrics filename based on model path
+        metrics_filename = "production_metrics.json" if "tuned" in cfg['model_path'] else f"{pipeline_type}_metrics.json"
+        metrics_path = os.path.join("dvclive", metrics_filename)
+        
+        with open(metrics_path, "w") as f:
             json.dump(metrics, f, indent=2)
 
         print(f"\n{'='*60}")
@@ -313,5 +491,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--type", choices=['pose', 'hybrid'], required=True)
     parser.add_argument("--model", type=str, help="Optional: custom model path (overrides params.yaml)")
+    parser.add_argument("--data", type=str, help="Optional: custom data path for evaluation (overrides params.yaml)")
+    parser.add_argument("--nlp", action='store_true', help="Generate natural language coaching reports")
+    parser.add_argument("--nlp-skill", type=str, default='intermediate', 
+                        choices=['beginner', 'intermediate', 'advanced', 'expert'],
+                        help="Skill level for natural language feedback (default: intermediate)")
+    parser.add_argument("--nlp-samples", type=int, default=5,
+                        help="Max number of samples to generate detailed feedback for (default: 5)")
+    parser.add_argument("--auto-name", action='store_true', 
+                        help="Auto-generate MLflow run name without prompting")
     args = parser.parse_args()
-    evaluate(args.type, args.model)
+    evaluate(args.type, args.model, args.nlp, args.nlp_skill, args.nlp_samples, args.auto_name, args.data)

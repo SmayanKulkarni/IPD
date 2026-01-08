@@ -177,10 +177,10 @@ class HybridFeatureExtractor:
                 ]
                 if frame.size == 0: continue
 
-            # Pose (get 2D landmarks for ROI + 3D world landmarks for normalized pose)
+            # Pose (get image-space landmarks for ROI + normalized pose)
             res = self.pose.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-            if res.pose_world_landmarks:
-                lm = np.array([[l.x, l.y, l.z] for l in res.pose_world_landmarks.landmark])
+            if res.pose_landmarks:
+                lm = np.array([[l.x, l.y, l.z] for l in res.pose_landmarks.landmark])
                 # Use Geometric Normalization (Compatible with KSI)
                 pose_norm = normalize_pose(lm).flatten()
             else:
@@ -245,8 +245,8 @@ class PoseFeatureExtractor:
                 if frame_cropped.size == 0: continue
             
             res = self.pose.process(cv2.cvtColor(frame_cropped, cv2.COLOR_BGR2RGB))
-            if res.pose_world_landmarks:
-                lm = np.array([[l.x, l.y, l.z] for l in res.pose_world_landmarks.landmark])
+            if res.pose_landmarks:
+                lm = np.array([[l.x, l.y, l.z] for l in res.pose_landmarks.landmark])
                 frames.append(normalize_pose(lm))
         cap.release()
         return np.array(frames) if frames else None

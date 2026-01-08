@@ -938,9 +938,13 @@ Your score of **{ksi_total:.2f}** ({rating}) indicates fundamental technique iss
         
         return timestamps
     
-    def format_feedback_text(self, feedback: CoachingFeedback) -> str:
+    def format_feedback_text(self, feedback: CoachingFeedback, simplified: bool = False) -> str:
         """
         Format CoachingFeedback into readable text output.
+        
+        Args:
+            feedback: CoachingFeedback object
+            simplified: If True, removes weekly plan and shortens output
         """
         sections = []
         
@@ -959,21 +963,24 @@ Your score of **{ksi_total:.2f}** ({rating}) indicates fundamental technique iss
         sections.append("-" * 70)
         sections.append("")
         
-        # Priority Fixes
+        # Priority Fixes (limit to 2 in simplified mode)
+        max_fixes = 2 if simplified else 3
         sections.append("## 🎯 PRIORITY FIXES")
         sections.append("")
         
-        for i, fix in enumerate(feedback.priority_fixes, 1):
+        for i, fix in enumerate(feedback.priority_fixes[:max_fixes], 1):
             sections.append(f"### {i}. {fix.issue}")
             sections.append("")
-            sections.append(fix.explanation)
-            sections.append("")
+            if not simplified:  # Full explanation only in non-simplified mode
+                sections.append(fix.explanation)
+                sections.append("")
             sections.append(f"**How to fix:** {fix.fix}")
             sections.append("")
             sections.append(fix.drill)
             sections.append("")
-            sections.append(f"💡 **Visual cue:** {fix.visual_cue}")
-            sections.append(f"⚠️ **Avoid:** {fix.common_mistake}")
+            if not simplified:
+                sections.append(f"💡 **Visual cue:** {fix.visual_cue}")
+                sections.append(f"⚠️ **Avoid:** {fix.common_mistake}")
             sections.append(f"✅ **Success looks like:** {fix.success_indicator}")
             sections.append("")
             sections.append("-" * 40)
@@ -993,23 +1000,25 @@ Your score of **{ksi_total:.2f}** ({rating}) indicates fundamental technique iss
             sections.append(f"**{phase.replace('_', ' ').title()}:** {analysis}")
         sections.append("")
         
-        # Strengths
+        # Strengths (limit to 3 in simplified mode)
         if feedback.strengths:
+            max_strengths = 3 if simplified else 5
             sections.append("## 🌟 YOUR STRENGTHS")
-            for strength in feedback.strengths:
+            for strength in feedback.strengths[:max_strengths]:
                 sections.append(strength)
             sections.append("")
         
-        # Weekly Plan
-        sections.append("## 📅 4-WEEK IMPROVEMENT PLAN")
-        for week, activities in feedback.weekly_plan.items():
-            sections.append(f"\n**{week.replace('_', ' ').title()}**")
-            for activity in activities:
-                sections.append(activity)
-        sections.append("")
+        # Weekly Plan (skip in simplified mode)
+        if not simplified:
+            sections.append("## 📅 4-WEEK IMPROVEMENT PLAN")
+            for week, activities in feedback.weekly_plan.items():
+                sections.append(f"\n**{week.replace('_', ' ').title()}**")
+                for activity in activities:
+                    sections.append(activity)
+            sections.append("")
         
         # Technical Notes (if present)
-        if feedback.technical_notes:
+        if feedback.technical_notes and not simplified:
             sections.append(feedback.technical_notes)
             sections.append("")
         
@@ -1020,9 +1029,14 @@ Your score of **{ksi_total:.2f}** ({rating}) indicates fundamental technique iss
         
         return "\n".join(sections)
     
-    def format_feedback_json(self, feedback: CoachingFeedback) -> str:
-        """Format feedback as JSON for API responses."""
-        return json.dumps({
+    def format_feedback_json(self, feedback: CoachingFeedback, simplified: bool = False) -> str:
+        """Format feedback as JSON for API responses.
+        
+        Args:
+            feedback: CoachingFeedback object
+            simplified: If True, excludes weekly plan
+        """
+        data = {
             'overall_score': feedback.overall_score,
             'rating': feedback.rating,
             'summary': feedback.summary,
@@ -1031,25 +1045,33 @@ Your score of **{ksi_total:.2f}** ({rating}) indicates fundamental technique iss
                     'issue': f.issue,
                     'severity': f.severity.value,
                     'cause': f.cause,
-                    'explanation': f.explanation,
+                    'explanation': f.explanation if not simplified else None,
                     'fix': f.fix,
                     'drill': f.drill,
-                    'visual_cue': f.visual_cue,
-                    'common_mistake': f.common_mistake,
+                    'visual_cue': f.visual_cue if not simplified else None,
+                    'common_mistake': f.common_mistake if not simplified else None,
                     'success_indicator': f.success_indicator
                 }
-                for f in feedback.priority_fixes
+                for f in feedback.priority_fixes[:(2 if simplified else 3)]
             ],
             'phase_analysis': feedback.phase_analysis,
             'timing_feedback': feedback.timing_feedback,
             'power_feedback': feedback.power_feedback,
-            'strengths': feedback.strengths,
+            'strengths': feedback.strengths[:(3 if simplified else 5)],
             'improvement_areas': feedback.improvement_areas,
-            'weekly_plan': feedback.weekly_plan,
             'motivational_message': feedback.motivational_message,
-            'technical_notes': feedback.technical_notes,
-            'video_timestamps': feedback.video_timestamps
-        }, indent=2)
+            'technical_notes': feedback.technical_notes if not simplified else None
+        }
+        
+        # Include weekly plan only if not simplified
+        if not simplified:
+            data['weekly_plan'] = feedback.weekly_plan
+            data['video_timestamps'] = feedback.video_timestamps
+        
+        # Remove None values
+        data = {k: v for k, v in data.items() if v is not None}
+        
+        return json.dumps(data, indent=2)
 
 
 # =============================================================================
@@ -1059,7 +1081,8 @@ Your score of **{ksi_total:.2f}** ({rating}) indicates fundamental technique iss
 def generate_coaching_report(ksi_result, shot_type_str: str, 
                             skill_level_str: str = 'intermediate',
                             user_name: Optional[str] = None,
-                            output_format: str = 'text') -> str:
+                            output_format: str = 'text',
+                            simplified: bool = False) -> str:
     """
     Convenience function to generate complete coaching report.
     
@@ -1069,6 +1092,7 @@ def generate_coaching_report(ksi_result, shot_type_str: str,
         skill_level_str: User skill level ('beginner', 'intermediate', 'advanced', 'expert')
         user_name: Optional user name for personalization
         output_format: 'text' or 'json'
+        simplified: If True, removes weekly plan and shortens output
     
     Returns:
         Formatted coaching report as string
@@ -1090,6 +1114,6 @@ def generate_coaching_report(ksi_result, shot_type_str: str,
     
     # Format output
     if output_format == 'json':
-        return coach.format_feedback_json(feedback)
+        return coach.format_feedback_json(feedback, simplified=simplified)
     else:
-        return coach.format_feedback_text(feedback)
+        return coach.format_feedback_text(feedback, simplified=simplified)

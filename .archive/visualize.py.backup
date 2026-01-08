@@ -130,8 +130,8 @@ def visualize_3d(video_path: str, crop_config: Dict, mp_config: Dict, speed: flo
                 continue
 
         res = extractor.pose.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-        if res.pose_world_landmarks:
-            lm = np.array([[l.x, l.y, l.z] for l in res.pose_world_landmarks.landmark])
+        if res.pose_landmarks:
+            lm = np.array([[l.x, l.y, l.z] for l in res.pose_landmarks.landmark])
             raw_landmarks.append(lm)
 
         if processed >= int(tail_frames):

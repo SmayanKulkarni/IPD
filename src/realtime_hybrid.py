@@ -67,6 +67,60 @@ def _apply_crop(frame: np.ndarray, crop_cfg: dict) -> np.ndarray:
     return cropped if cropped.size else frame
 
 
+def _smooth_signal(signal, window_size=3):
+    """Exponential moving average for real-time signal smoothing."""
+    if len(signal) == 0:
+        return signal
+    alpha = 2.0 / (window_size + 1)
+    smoothed = [signal[0]]
+    for val in signal[1:]:
+        smoothed.append(alpha * val + (1 - alpha) * smoothed[-1])
+    return np.array(smoothed)
+
+
+def _detect_contact_realtime(landmarks_buffer):
+    """
+    Real-time contact detection based on multi-joint acceleration.
+    
+    Detects the frame within the buffer with peak arm acceleration
+    (wrist + elbow + shoulder composite motion).
+    
+    Args:
+        landmarks_buffer: deque of (33, 3) landmark arrays
+    
+    Returns:
+        contact_frame_idx: Index within buffer (0 to len-1) with highest acceleration
+    """
+    if len(landmarks_buffer) < 3:  # Need at least 3 frames for meaningful acceleration
+        return 0
+    
+    lm_array = np.array(landmarks_buffer)  # (T, 33, 3)
+    
+    # Get right arm joints: shoulder (12), elbow (14), wrist (16)
+    shoulder_pos = lm_array[:, 12, :2]  # (T, 2)
+    elbow_pos = lm_array[:, 14, :2]
+    wrist_pos = lm_array[:, 16, :2]
+    
+    # Calculate velocities
+    shoulder_vel = np.linalg.norm(np.diff(shoulder_pos, axis=0), axis=1)
+    elbow_vel = np.linalg.norm(np.diff(elbow_pos, axis=0), axis=1)
+    wrist_vel = np.linalg.norm(np.diff(wrist_pos, axis=0), axis=1)
+    
+    # Composite velocity (weighted: wrist primary, elbow secondary)
+    composite_vel = 0.5 * wrist_vel + 0.3 * elbow_vel + 0.2 * shoulder_vel
+    
+    # Smooth for real-time robustness
+    composite_vel_smooth = _smooth_signal(composite_vel, window_size=3)
+    
+    # Find frame with peak acceleration
+    if len(composite_vel_smooth) > 1:
+        acceleration = np.diff(composite_vel_smooth)
+        contact_idx = np.argmax(np.abs(acceleration)) + 1  # +1 because diff reduces length
+        return min(contact_idx, len(landmarks_buffer) - 1)
+    
+    return np.argmax(composite_vel)
+
+
 def _prepare_model_inputs(model: tf.keras.Model, x_fused: np.ndarray, cnn_dim: int):
     """Prepare inputs for different historical model signatures.
 
@@ -181,9 +235,12 @@ def main():
             skip_crop = should_skip_crop(os.path.basename(args.source))
 
         window = deque(maxlen=seq_len)
+        landmark_buffer = deque(maxlen=seq_len)  # Track landmarks for contact detection
         last_pose = None
         zeros_pose = np.zeros(99, dtype=np.float32)
         last_box = None
+        
+        contact_frame_idx = -1  # Index in window where contact occurs
 
         prev_tick = time.time()
         shown_fps = 0.0
@@ -207,17 +264,20 @@ def main():
 
             res = extractor.pose.process(cv2.cvtColor(frame_cropped, cv2.COLOR_BGR2RGB))
 
-            if res.pose_world_landmarks:
+            # Use image-space landmarks (pose_landmarks) for consistency with templates
+            if res.pose_landmarks:
                 lm = np.array(
-                    [[l.x, l.y, l.z] for l in res.pose_world_landmarks.landmark],
+                    [[l.x, l.y, l.z] for l in res.pose_landmarks.landmark],
                     dtype=np.float32,
                 )
                 from utils import normalize_pose
 
                 pose_flat = normalize_pose(lm).astype(np.float32).flatten()
                 last_pose = pose_flat
+                landmark_buffer.append(lm)
             else:
                 pose_flat = last_pose if last_pose is not None else zeros_pose
+                landmark_buffer.append(np.zeros((33, 3), dtype=np.float32))
 
             h2, w2 = frame_cropped.shape[:2]
             box = extractor._compute_pose_roi_box(
@@ -241,8 +301,12 @@ def main():
             window.append(fused)
 
             pred_text_lines = ["warming up..."]
+            contact_indicator = ""
 
             if len(window) == seq_len:
+                # Detect contact moment for real-time insight
+                contact_frame_idx = _detect_contact_realtime(landmark_buffer)
+                
                 x = np.asarray(window, dtype=np.float32)[None, ...]
 
                 model_inputs = _prepare_model_inputs(model, x_fused=x, cnn_dim=cnn_dim)
@@ -254,9 +318,12 @@ def main():
                 for j, idx in enumerate(top_idx):
                     name = classes[idx] if classes and idx < len(classes) else f"class_{int(idx)}"
                     pred_text_lines.append(f"{j+1}. {name}: {float(probs[idx]):.3f}")
+                
+                # Mark contact frame
+                contact_indicator = f" [Contact: frame {contact_frame_idx+1}/{seq_len}]"
 
                 if args.headless and printed < 5:
-                    print(" | ".join(pred_text_lines))
+                    print(" | ".join(pred_text_lines) + contact_indicator)
                     printed += 1
 
             # Update FPS display
@@ -271,7 +338,7 @@ def main():
             y = 30
             cv2.putText(
                 overlay,
-                f"FPS: {shown_fps:.1f}",
+                f"FPS: {shown_fps:.1f}" + contact_indicator,
                 (10, y),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.7,

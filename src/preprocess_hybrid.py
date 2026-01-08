@@ -82,8 +82,8 @@ def process_video_streaming(
 
             # Pose features (99); fill missing with last valid or zeros
             res = extractor.pose.process(cv2.cvtColor(frame_cropped, cv2.COLOR_BGR2RGB))
-            if res.pose_world_landmarks:
-                lm = np.array([[l.x, l.y, l.z] for l in res.pose_world_landmarks.landmark], dtype=np.float32)
+            if res.pose_landmarks:
+                lm = np.array([[l.x, l.y, l.z] for l in res.pose_landmarks.landmark], dtype=np.float32)
                 pose_flat = normalize_pose(lm).astype(np.float32).flatten()
                 last_pose = pose_flat
                 last_landmarks = lm.copy()  # NEW: store raw landmarks

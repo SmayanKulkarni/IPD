@@ -1,0 +1,50 @@
+{
+  "overall_score": 0.4837126661246616,
+  "rating": "\u2b50 Foundation Building",
+  "summary": "Let's rebuild your **Backhand Net Shot** from the ground up. \ud83d\udcaa\n\nYour score of **0.48** (\u2b50 Foundation Building) indicates fundamental technique issues, but that's actually good news - it means small changes will create big improvements! Focus on the basics below, and you'll see rapid progress.",
+  "priority_fixes": [
+    {
+      "issue": "\ud83d\udd34 **Trunk Posture** significantly shows too much forward lean (167.8\u00b0 deviation)",
+      "severity": "critical",
+      "cause": "reaching",
+      "explanation": null,
+      "fix": "Maintain 5-10\u00b0 forward lean at contact. Core engaged (like bracing for a punch). Excessive lean = weak shots.",
+      "drill": "**Posture Control Drill:** Broomstick overhead: hold stick overhead during shadow footwork. Must maintain upright posture. 5 minutes continuous.\n\n*Duration: 5 minutes before each session*",
+      "visual_cue": null,
+      "common_mistake": null,
+      "success_indicator": "Better balance on recovery. More consistent shot direction. Less lower back fatigue."
+    },
+    {
+      "issue": "Your Spine Lateral Lean shows a 177.7\u00b0 deviation from optimal technique.",
+      "severity": "major",
+      "cause": "technical",
+      "explanation": null,
+      "fix": "Focus on your Spine Lateral Lean during practice. Use video analysis to compare with expert footage.",
+      "drill": "Practice the movement slowly, focusing on Spine Lateral Lean position. Use a mirror or video for feedback.",
+      "visual_cue": null,
+      "common_mistake": null,
+      "success_indicator": "You'll feel more comfortable and powerful when the position is correct."
+    }
+  ],
+  "phase_analysis": {
+    "preparation": "Your ready position and initial setup look solid. Good foundation. (Phase score: 0.86)",
+    "contact": "Clean contact! Your technique at impact is working well. (Phase score: 0.86)",
+    "follow_through": "Good follow-through. You're completing your shots properly. (Phase score: 0.89)"
+  },
+  "timing_feedback": "\u23f0 **Late peak:** You're reaching maximum speed 200ms after optimal.\nYou're still accelerating after contact, wasting energy.\n**Fix:** Speed up your preparation phase. Better anticipation = earlier swing initiation.",
+  "power_feedback": "\ud83d\udcaa **Excellent power generation!** You're matching expert racket head speed.",
+  "strengths": [
+    "\u2705 Excellent Hip Flexion positioning",
+    "\u2705 Excellent Ankle Angle positioning",
+    "\u2705 Excellent Ankle Angle positioning"
+  ],
+  "improvement_areas": [
+    "\u2022 Spine Forward Lean (167.8\u00b0 off)",
+    "\u2022 Spine Lateral Lean (177.7\u00b0 off)",
+    "\u2022 Hip Rotation Angle (85.7\u00b0 off)",
+    "\u2022 Left Knee Angle (18.7\u00b0 off)",
+    "\u2022 Right Shoulder Elevation (16.9\u00b0 off)",
+    "\u2022 Left Elbow Angle (16.9\u00b0 off)"
+  ],
+  "motivational_message": "The best players rebuild their technique multiple times. This is YOUR foundation moment. Small steps, big results! \ud83d\udcaf"
+}

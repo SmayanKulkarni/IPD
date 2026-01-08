@@ -39,7 +39,7 @@ def visualize_video(video_path: Path, mode: str, speed: float) -> bool:
     """
     cmd = [
         sys.executable,  # Use current Python interpreter
-        "src/visualize.py",
+        "src/research/visualize.py",
         "--video", str(video_path),
         "--mode", mode,
         "--speed", str(speed),
