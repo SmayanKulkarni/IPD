@@ -1,3 +1,57 @@
+"""
+Expert Template Generation for KSI Evaluation
+==============================================
+
+Generates reference templates from expert player videos for biomechanical
+comparison in the KSI evaluation pipeline. Templates represent the "gold
+standard" motion patterns for each shot type.
+
+Key Features:
+    - Multi-video template averaging with quality weighting
+    - Dynamic Time Warping (DTW) for temporal alignment
+    - Quality-based video filtering (motion smoothness, stability)
+    - Reference video selection (minimum total DTW distance)
+    - Phase-specific template extraction (contact phase)
+    - Temporal resampling for FPS normalization
+
+Template Generation Pipeline:
+    1. Load expert videos with same preprocessing as hybrid pipeline
+    2. Extract pose landmarks and enhanced features
+    3. Quality filter: remove low-quality recordings
+    4. Find best reference video (centroid selection)
+    5. DTW-align all videos to reference
+    6. Compute quality-weighted average template
+    7. Extract phase-specific templates (optional)
+    8. Save as compressed .npz with metadata
+
+Output Format:
+    .npz file with:
+    - '<class_name>': (T, 33, 3) raw landmark template
+    - '<class_name>_variant1/2/3': Top-3 variant templates
+    - '<class_name>_contact': Contact phase template
+    - '_metadata_json': Generation metadata
+
+Quality Metrics:
+    - Motion smoothness (low velocity variance)
+    - Feature stability (low feature variance)
+    - Minimum motion threshold (detects static frames)
+
+Dependencies:
+    External: cv2, numpy, scipy, yaml
+    Internal: features.PoseFeatureExtractor, ksi_v2, utils
+
+Configuration (params.yaml):
+    expert_pipeline:
+        raw_path: Path to expert video directory
+        output_path: Output path for template file
+
+Usage:
+    python generate_templates.py
+
+Author: IPD Research Team
+Version: 1.0.0
+"""
+
 import os
 import yaml
 import cv2
@@ -7,9 +61,6 @@ from datetime import datetime
 from features import PoseFeatureExtractor
 from ksi_v2 import extract_enhanced_features, EnhancedKSI, ShotPhaseSegmenter, ShotPhase, dynamic_time_warping_optimized
 from utils import normalize_pose, should_skip_crop, get_segment_bounds, resolve_crop_config_for_video
-
-# NOTE: DTW functions now use optimized implementation from ksi_v2
-# See: dynamic_time_warping_optimized()
 
 
 def temporal_resample(sequence, original_fps, target_fps):

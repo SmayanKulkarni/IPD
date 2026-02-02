@@ -119,6 +119,17 @@ def predict_shot_type_at_contact(all_windows, all_landmarks, model, classes, cnn
     
     # Get all predictions first
     features = np.array(all_windows)  # (N, T, D)
+    
+    # Downsample to match model's expected sequence length
+    expected_seq_len = int(model.inputs[0].shape[1]) if model.inputs else seq_len
+    if expected_seq_len != seq_len and expected_seq_len is not None:
+        # Downsample using stride
+        stride = max(1, seq_len // expected_seq_len)
+        features = features[:, ::stride, :][:, :expected_seq_len, :]  # Take every stride-th frame
+        # Also downsample landmarks for contact detection
+        all_landmarks = [lm[::stride][:expected_seq_len] for lm in all_landmarks]
+        seq_len = expected_seq_len
+    
     model_inputs = _prepare_model_inputs(model, x_fused=features, cnn_dim=cnn_dim)
     all_probs = model.predict(model_inputs, verbose=0)
     
@@ -312,18 +323,38 @@ def _prepare_model_inputs(model, x_fused, cnn_dim):
     x_cnn = x_fused[..., -cnn_dim:] if cnn_dim > 0 else x_fused[..., :0]
     x_pose = x_fused[..., :-cnn_dim] if cnn_dim > 0 else x_fused
     
-    candidates = {
-        int(x_cnn.shape[-1]): x_cnn,
-        int(x_pose.shape[-1]): x_pose,
-        int(x_fused.shape[-1]): x_fused,
-    }
+    # For dual-input models (CNN + Pose), return both inputs in the correct order
+    if len(model.inputs) == 2:
+        # Typically: [cnn_input, pose_input] or [pose_input, cnn_input]
+        # Check which input expects which features based on shape
+        input_shapes = [int(inp.shape[-1]) for inp in model.inputs]
+        
+        result = []
+        for expected_dim in input_shapes:
+            if expected_dim == cnn_dim:
+                result.append(x_cnn)
+            elif expected_dim == (fused_dim - cnn_dim):
+                result.append(x_pose)
+            else:
+                raise ValueError(
+                    f"Model expects input dim {expected_dim}, but available are CNN({cnn_dim}) or Pose({fused_dim - cnn_dim}). "
+                    f"(fused_dim={fused_dim})"
+                )
+        return result
     
+    # Single input model: try to match the expected dimension
     if len(model.inputs) == 1:
         expected = int(model.inputs[0].shape[-1])
+        candidates = {
+            int(x_cnn.shape[-1]): x_cnn,
+            int(x_pose.shape[-1]): x_pose,
+            int(x_fused.shape[-1]): x_fused,
+        }
         if expected in candidates:
             return [candidates[expected]]
         return [x_fused]
     
+    # Multiple inputs: try to match each dimension
     expected_dims = []
     for inp in model.inputs:
         try:
@@ -336,12 +367,15 @@ def _prepare_model_inputs(model, x_fused, cnn_dim):
         if d is None:
             prepared.append(x_fused)
             continue
-        if d not in candidates:
+        if d == cnn_dim:
+            prepared.append(x_cnn)
+        elif d == (fused_dim - cnn_dim):
+            prepared.append(x_pose)
+        else:
             raise ValueError(
-                f"Model expects input dim {d}, but available are {sorted(candidates.keys())}. "
-                f"(fused_dim={fused_dim}, cnn_dim={cnn_dim})"
+                f"Model expects input dim {d}, but available are CNN({cnn_dim}) or Pose({fused_dim - cnn_dim}). "
+                f"(fused_dim={fused_dim})"
             )
-        prepared.append(candidates[d])
     
     return prepared
 

@@ -1,3 +1,59 @@
+"""
+Hybrid Feature Preprocessing Pipeline
+======================================
+
+Streaming video processor for extracting fused pose+CNN features from raw
+badminton footage. Combines MediaPipe pose landmarks with MobileNetV2 visual
+embeddings for hybrid classification.
+
+Key Features:
+    - Dual-feature extraction: 3D pose (99D) + CNN visual (128D)
+    - Pose-guided ROI cropping for CNN input
+    - Raw landmark preservation for KSI evaluation
+    - Memory-efficient streaming processing
+    - Sliding window segmentation with stride
+    - Temporal smoothing via bounding box tracking
+
+Processing Pipeline:
+    1. Load video and determine segment bounds
+    2. For each frame in segment:
+       a. Apply crop configuration
+       b. Extract 3D pose via MediaPipe
+       c. Compute pose-guided ROI bounding box
+       d. Extract CNN features via MobileNetV2
+       e. Fuse pose + CNN features
+       f. Store raw landmarks for KSI
+    3. Save windows with features and landmarks
+    4. Cleanup resources
+
+Output Format:
+    .npz files with:
+    - 'features': (T, 99+CNN_DIM) fused pose+CNN features
+    - 'raw_landmarks': (T, 33, 3) normalized pose for KSI
+    - 'fps': Original video frame rate
+
+Dependencies:
+    External: cv2, numpy, tensorflow, yaml, tqdm
+    Internal: features.HybridFeatureExtractor, utils.normalize_pose
+
+Configuration (params.yaml):
+    hybrid_pipeline:
+        data_path: Output directory for processed features
+        cnn_feature_dim: CNN embedding dimension (default: 128)
+        cnn_input_size: CNN input resolution (default: 224)
+        sequence_length: Frames per window
+        stride: Sliding window step size
+        crop_config: Frame cropping parameters
+        cnn_roi: Pose-guided ROI configuration
+    mediapipe: MediaPipe Pose configuration
+
+Usage:
+    python preprocess_hybrid.py
+
+Author: IPD Research Team
+Version: 1.0.0
+"""
+
 import os
 import yaml
 import cv2
@@ -57,7 +113,7 @@ def process_video_streaming(
     last_box = None
 
     window_buffer = deque(maxlen=seq_len)
-    landmarks_buffer = deque(maxlen=seq_len)  # NEW: store raw landmarks
+    landmarks_buffer = deque(maxlen=seq_len)
     saved_count = 0
     frame_idx = 0
 
@@ -80,18 +136,16 @@ def process_video_streaming(
                 if frame_cropped.size == 0:
                     continue
 
-            # Pose features (99); fill missing with last valid or zeros
             res = extractor.pose.process(cv2.cvtColor(frame_cropped, cv2.COLOR_BGR2RGB))
             if res.pose_landmarks:
                 lm = np.array([[l.x, l.y, l.z] for l in res.pose_landmarks.landmark], dtype=np.float32)
                 pose_flat = normalize_pose(lm).astype(np.float32).flatten()
                 last_pose = pose_flat
-                last_landmarks = lm.copy()  # NEW: store raw landmarks
+                last_landmarks = lm.copy()
             else:
                 pose_flat = last_pose if last_pose is not None else zeros_pose
                 lm = last_landmarks if last_landmarks is not None else zeros_landmarks
 
-            # CNN features (optionally pose-guided ROI crop)
             h2, w2 = frame_cropped.shape[:2]
             box = extractor._compute_pose_roi_box(
                 res.pose_landmarks if hasattr(res, 'pose_landmarks') else None,

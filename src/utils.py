@@ -1,4 +1,53 @@
+"""
+Utility Functions for Pose Processing
+======================================
+
+Core utility functions supporting video preprocessing and pose normalization
+across both the pose and hybrid pipelines. Handles geometric transformations,
+video segment extraction, and crop configuration resolution.
+
+Key Components:
+    1. Pose Normalization (normalize_pose, normalize_sequence)
+       - Person-centric coordinate system transformation
+       - Three-step process: Centering → Alignment → Scaling
+       - Hip-centered with spine-aligned Y-axis
+       - Scale-invariant via spine length normalization
+       
+    2. Video Segment Extraction (get_segment_bounds)
+       - Extracts relevant portions of shot videos
+       - Supports tail-based, middle-based, or full extraction
+       - Configurable via segment_rules in params.yaml
+       
+    3. Crop Configuration (resolve_crop_config_for_video)
+       - Per-video crop overrides based on video number
+       - Supports wildcard patterns for batch configuration
+       - Handles pre-cropped files with "(N)" naming pattern
+       
+    4. File Pattern Detection (should_skip_crop, extract_video_number)
+       - Detects pre-cropped files that should skip cropping
+       - Extracts video numbers for per-video configuration
+
+Normalization Algorithm:
+    1. Center pose at hip midpoint (joints 23, 24)
+    2. Align Y-axis with spine direction (hip → shoulder center)
+    3. Compute orthogonal X-axis from shoulder vector
+    4. Z-axis via cross product for right-handed system
+    5. Scale by spine length for size invariance
+
+Dependencies:
+    External: numpy, re
+    
+Configuration (params.yaml):
+    segment_rules: Video segment extraction settings
+    crop_overrides: Per-video crop configuration
+
+Author: IPD Research Team
+Version: 1.0.0
+"""
+
 import numpy as np
+import re
+
 
 def normalize_pose(keypoints_3d):
     """

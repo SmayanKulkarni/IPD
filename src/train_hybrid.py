@@ -1,3 +1,54 @@
+"""
+Hybrid TCN Training Pipeline
+=============================
+
+Training script for the hybrid pose+CNN temporal convolutional network (TCN)
+classifier. Combines geometric pose features with MobileNetV2 visual embeddings
+for robust badminton shot classification.
+
+Key Features:
+    - Dual-input architecture: TCN for CNN features + GRU for pose features
+    - Late fusion via concatenation for complementary feature integration
+    - Train/validation/test split (70/10/20) with stratification
+    - MLflow experiment tracking and model registry integration
+    - DVC live callback for experiment versioning
+
+Architecture:
+    CNN Branch:
+        Conv1D (causal, dilated) → BatchNorm → ReLU → GRU → Dense
+    Pose Branch:
+        GRU → BatchNorm → Dense → Dropout
+    Fusion:
+        Concatenate → Dense (softmax)
+
+Pipeline Position:
+    preprocess_hybrid.py → [train_hybrid.py] → evaluate.py
+    
+    Consumes preprocessed .npz files containing fused features:
+    (T, 99+CNN_DIM) where T=sequence_length, 99=pose, CNN_DIM=visual embedding
+
+Dependencies:
+    External: tensorflow, mlflow, sklearn, numpy, yaml, dvclive
+    Internal: models.build_tcn_hybrid, mlflow_utils.MLflowRunManager
+
+Configuration (params.yaml):
+    hybrid_pipeline:
+        data_path: Path to preprocessed hybrid data
+        model_path: Output path for trained model
+        cnn_feature_dim: Dimension of CNN visual features (default: 128)
+        sequence_length: Number of frames per sample
+        epochs: Maximum training epochs
+        batch_size: Training batch size
+    base:
+        random_state: Seed for reproducibility
+
+Usage:
+    python train_hybrid.py
+
+Author: IPD Research Team
+Version: 1.0.0
+"""
+
 import os
 import yaml
 import numpy as np
@@ -8,30 +59,26 @@ from sklearn.model_selection import train_test_split
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 from dvclive.keras import DVCLiveCallback
-# Local Import
 from models import build_tcn_hybrid
 from mlflow_utils import MLflowRunManager
+
 
 def main():
     with open("params.yaml") as f: params = yaml.safe_load(f)
     cfg = params['hybrid_pipeline']
     
-    # 1. Setup MLflow with Interactive Run Manager
     run_manager = MLflowRunManager("Hybrid_TCN_Experiment")
     mlflow.enable_system_metrics_logging()
     mlflow.tensorflow.autolog(log_models=False)
 
-    # Start interactive run with prompts for name and description
     with run_manager.start_interactive_run(
         default_description="TCN-Hybrid pipeline training with pose + CNN fusion"
     ):
-        # 2. Log Parameters (including nested configs)
         mlflow.log_params(cfg)
         mlflow.log_params(params['mediapipe'])
         mlflow.log_params(params['segment_rules'])
         mlflow.log_param("base.random_state", params['base']['random_state'])
         
-        # 3. Load Data
         X, y = [], []
         if not os.path.exists(cfg['data_path']): 
             print(f"❌ Data path {cfg['data_path']} not found.")
@@ -52,7 +99,7 @@ def main():
         y = np.array(y)
         y_cat = to_categorical(y, len(classes))
         
-        # 4. Prepare Data (Split CNN vs Pose features)
+
         cnn_dim = cfg['cnn_feature_dim']
         X_pose = X[..., :-cnn_dim]
         X_cnn = X[..., -cnn_dim:]
@@ -68,25 +115,25 @@ def main():
         idx_train, idx_val, y_train_lbl, y_val_lbl = train_test_split(
             idx_trainval,
             y_trainval_lbl,
-            test_size=0.125,  # 10% overall val
+            test_size=0.125,
             stratify=y_trainval_lbl,
             random_state=params['base']['random_state']
         )
         
-        # Log dataset information
+
         run_manager.log_dataset_info(
             X_pose[idx_train], X_pose[idx_val], X_pose[idx_test],
             y_cat[idx_train], y_cat[idx_val], y_cat[idx_test],
             classes
         )
         
-        # 5. Build Model
+
         model = build_tcn_hybrid(X_pose.shape[1:], X_cnn.shape[1:], len(classes))
         
-        # Log model architecture
+
         run_manager.log_model_architecture(model)
         
-        # 6. Callbacks
+
         callbacks = [
             EarlyStopping(
                 patience=25, 
@@ -120,17 +167,17 @@ def main():
             verbose=1
         )
         
-        # Log training artifacts and curves
+
         run_manager.log_training_artifacts(history, save_plots=True)
         
         print(f"\n✅ Training finished!")
         print(f"   Best Val Acc: {max(history.history['val_accuracy']):.4f}")
 
-        # 7. Log and Register the Best Model
+
         print("\n📦 Logging and Registering Best Model to MLflow...")
         best_model = tf.keras.models.load_model(cfg['model_path'])
         
-        # For multi-input models, skip signature to avoid MLflow compatibility issues
+
         mlflow.keras.log_model(
             best_model, 
             artifact_path="model", 

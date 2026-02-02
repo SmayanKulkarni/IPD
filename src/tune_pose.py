@@ -1,3 +1,58 @@
+"""
+Hyperparameter Tuning for Pose LSTM Model
+==========================================
+
+Optuna-based hyperparameter optimization for the pose-only LSTM classifier.
+Searches over architectural and training hyperparameters to maximize
+validation accuracy.
+
+Key Features:
+    - Bayesian hyperparameter search via Optuna
+    - Median pruner for early stopping of unpromising trials
+    - MLflow integration for trial tracking and comparison
+    - Automatic retraining with best hyperparameters
+    - Model registration to MLflow Model Registry
+
+Search Space:
+    Architecture:
+        - conv_filters: 64-192 (step 32)
+        - kernel_size: 3-7 (step 2)
+        - lstm_units: [64, 96, 128, 192, 256]
+        - dense_units: [32, 64, 96, 128, 192]
+    
+    Regularization:
+        - dropout_conv: 0.1-0.5
+        - dropout_lstm: 0.1-0.6
+        - dropout_dense: 0.0-0.5
+    
+    Training:
+        - learning_rate: 1e-5 to 5e-3 (log scale)
+        - batch_size: [8, 12, 16, 24, 32, 48, 64]
+
+Pipeline Position:
+    preprocess_pose.py → [tune_pose.py] → evaluate.py
+    
+    Alternative to train_pose.py for finding optimal hyperparameters
+    before production training.
+
+Dependencies:
+    External: optuna, tensorflow, sklearn, mlflow
+    Internal: None (model defined inline for flexibility)
+
+Configuration (params.yaml):
+    pose_pipeline:
+        data_path: Path to preprocessed pose data
+        epochs: Maximum epochs per trial (default: 80)
+    mlflow:
+        tracking_uri: MLflow tracking URI
+
+Usage:
+    python tune_pose.py --trials 50
+
+Author: IPD Research Team
+Version: 1.0.0
+"""
+
 import argparse
 import os
 import tempfile

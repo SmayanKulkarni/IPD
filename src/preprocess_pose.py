@@ -1,3 +1,59 @@
+"""
+Pose Feature Preprocessing Pipeline
+====================================
+
+Streaming video processor for extracting normalized 3D pose features from
+raw badminton video footage. Designed for memory efficiency with O(1) memory
+relative to video length.
+
+Key Features:
+    - Frame-by-frame streaming extraction (no full video loading)
+    - MediaPipe Pose for 3D landmark detection
+    - Geometric normalization (hip-centered, spine-aligned)
+    - Sliding window segmentation with configurable stride
+    - Incremental processing (skips already-processed videos)
+    - Segment-based extraction (tail/middle of shot videos)
+    - Per-video crop configuration support
+
+Processing Pipeline:
+    1. Load video and determine segment bounds
+    2. For each frame in segment:
+       a. Apply crop if not pre-cropped file
+       b. Extract 3D pose via MediaPipe
+       c. Normalize to person-centric coordinates
+       d. Add to rolling window buffer
+    3. Save windows to disk on stride boundaries
+    4. Cleanup resources (explicit garbage collection)
+
+Output Format:
+    .npz files with:
+    - 'features': (T, 99) normalized pose features
+    - 'fps': Original video frame rate
+
+Memory Management:
+    - Rolling deque buffer (maxlen=sequence_length)
+    - Immediate frame cleanup after processing
+    - Periodic garbage collection every 10 videos
+
+Dependencies:
+    External: cv2, numpy, mediapipe, yaml, tqdm
+    Internal: utils.normalize_pose, utils.get_segment_bounds
+
+Configuration (params.yaml):
+    pose_pipeline:
+        data_path: Output directory for processed features
+        sequence_length: Frames per window
+        stride: Sliding window step size
+        crop_config: Frame cropping parameters
+    mediapipe: MediaPipe Pose configuration
+
+Usage:
+    python preprocess_pose.py
+
+Author: IPD Research Team
+Version: 1.0.0
+"""
+
 import os
 import yaml
 import cv2
@@ -25,8 +81,6 @@ def process_video_streaming(video_path, output_dir, crop_config, mp_config, seq_
     filename = os.path.basename(video_path)
     file_id = os.path.splitext(filename)[0]
     
-    # --- INCREMENTAL CHECK ---
-    # If the first window exists, assume video is done.
     if os.path.exists(os.path.join(output_dir, f"{file_id}_win_0.npz")):
         return
 
@@ -34,20 +88,16 @@ def process_video_streaming(video_path, output_dir, crop_config, mp_config, seq_
     fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     
-    # Determine the segment bounds (start frame and number of frames)
     start_frame, tail_frames = get_segment_bounds(video_path, fps, total_frames, default_seconds=1.75, segment_cfg=segment_rules)
     cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
     
-    # Decide whether to skip cropping for files with the (N) naming pattern
     skip_crop = should_skip_crop(filename)
 
-    # Rolling buffer to hold exactly 'seq_len' frames
     window_buffer = deque(maxlen=seq_len)
 
     zeros_pose = np.zeros(99, dtype=np.float32)
     last_pose = None
     
-    # Initialize MediaPipe (Local scope to ensure cleanup)
     pose = get_pose_model(mp_config)
     
     frame_idx = 0
@@ -59,7 +109,6 @@ def process_video_streaming(video_path, output_dir, crop_config, mp_config, seq_
             if not ret:
                 break
             
-            # Crop (skip if filename matches the '(N)' pattern)
             if skip_crop:
                 frame_cropped = frame
             else:
@@ -80,12 +129,9 @@ def process_video_streaming(video_path, output_dir, crop_config, mp_config, seq_
                     del frame_cropped
                     continue
 
-            # Process
-            # Pass by reference to avoid copying large arrays
             image_rgb = cv2.cvtColor(frame_cropped, cv2.COLOR_BGR2RGB)
             res = pose.process(image_rgb)
             
-            # Cleanup heavy frame data immediately
             del frame
             del frame_cropped
             del image_rgb

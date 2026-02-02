@@ -1,37 +1,76 @@
+"""
+Pose-LSTM Training Pipeline
+============================
+
+Training script for the pose-based LSTM classifier in the badminton shot
+analysis system. Trains a Conv1D + LSTM architecture on normalized 3D pose
+sequences extracted from MediaPipe.
+
+Key Features:
+    - LSTM-based temporal modeling of pose sequences
+    - Train/validation/test split (70/10/20) with stratification
+    - MLflow experiment tracking with interactive run naming
+    - DVC live callback for experiment versioning
+    - Early stopping with best model checkpointing
+    - Automatic model registration to MLflow Model Registry
+
+Pipeline Position:
+    preprocess_pose.py → [train_pose.py] → evaluate.py
+    
+    Consumes preprocessed .npz files containing normalized pose features
+    (T, 99) where T=sequence_length and 99=33 joints × 3 coordinates.
+
+Dependencies:
+    External: tensorflow, mlflow, sklearn, numpy, yaml, dvclive
+    Internal: models.build_lstm_pose, mlflow_utils.MLflowRunManager
+
+Configuration (params.yaml):
+    pose_pipeline:
+        data_path: Path to preprocessed pose data
+        model_path: Output path for trained model
+        sequence_length: Number of frames per sample
+        epochs: Maximum training epochs
+        batch_size: Training batch size
+    base:
+        random_state: Seed for reproducibility
+
+Usage:
+    python train_pose.py
+
+Author: IPD Research Team
+Version: 1.0.0
+"""
+
 import os
 import yaml
 import numpy as np
 import mlflow
 import mlflow.tensorflow
-import tensorflow as tf  # <--- Added import
+import tensorflow as tf
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 from dvclive.keras import DVCLiveCallback
-# Local Import
 from models import build_lstm_pose
-from mlflow_utils import MLflowRunManager  # <--- NEW: Enhanced MLflow utilities
+from mlflow_utils import MLflowRunManager
+
 
 def main():
     with open("params.yaml") as f: params = yaml.safe_load(f)
     cfg = params['pose_pipeline']
     
-    # 1. Setup MLflow with Interactive Run Manager
     run_manager = MLflowRunManager("Pose_LSTM_Experiment")
     mlflow.enable_system_metrics_logging()
     mlflow.tensorflow.autolog(log_models=False)
 
-    # Start interactive run with prompts for name and description
     with run_manager.start_interactive_run(
         default_description="LSTM-Pose pipeline training with geometric normalization"
     ):
-        # 2. Log Parameters (including nested configs)
         mlflow.log_params(cfg)
         mlflow.log_params(params['mediapipe'])
         mlflow.log_params(params['segment_rules'])
         mlflow.log_param("base.random_state", params['base']['random_state'])
         
-        # 3. Load Data
         X, y = [], []
         if not os.path.exists(cfg['data_path']): 
             print(f"Data path {cfg['data_path']} not found.")
@@ -52,7 +91,7 @@ def main():
         y = np.array(y)
         y_cat = to_categorical(y, len(classes))
 
-        # Train/val/test split: 20% test, 10% val (from remaining)
+
         X_trainval, X_test, y_trainval, y_test, y_trainval_lbl, y_test_lbl = train_test_split(
             X,
             y_cat,
@@ -66,21 +105,21 @@ def main():
             X_trainval,
             y_trainval,
             y_trainval_lbl,
-            test_size=0.125,  # 0.125 of 0.8 = 0.1 overall
+            test_size=0.125,
             stratify=y_trainval_lbl,
             random_state=params['base']['random_state']
         )
         
-        # Log dataset information
+
         run_manager.log_dataset_info(X_train, X_val, X_test, y_train, y_val, y_test, classes)
         
-        # 4. Build Model
+
         model = build_lstm_pose(X_train.shape[1:], len(classes))
         
-        # Log model architecture
+
         run_manager.log_model_architecture(model)
         
-        # 5. Callbacks
+
         callbacks = [
             EarlyStopping(
                 patience=10, 
@@ -112,13 +151,13 @@ def main():
             verbose=1
         )
         
-        # Log training artifacts and curves
+
         run_manager.log_training_artifacts(history, save_plots=True)
         
         print(f"\n✅ Training finished!")
         print(f"   Best Val Acc: {max(history.history['val_accuracy']):.4f}")
 
-        # 6. Log and Register the Best Model
+
         print("\n📦 Logging and Registering Best Model to MLflow...")
         best_model = tf.keras.models.load_model(cfg['model_path'])
         

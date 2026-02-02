@@ -1,4 +1,57 @@
-# Updated evaluate.py
+"""
+Model Evaluation Pipeline with KSI v2.0 Metrics
+================================================
+
+Comprehensive evaluation script for trained badminton shot classification models.
+Implements enhanced Kinematic Similarity Index (KSI) v2.0 for biomechanical
+analysis and optional natural language coaching feedback generation.
+
+Key Features:
+    - Classification accuracy and confusion matrix analysis
+    - KSI v2.0 biomechanical comparison against expert templates
+    - Phase-aware scoring (preparation, loading, contact, follow-through)
+    - Per-joint error analysis with confidence intervals
+    - Velocity and acceleration derivative metrics
+    - Optional NLP coaching report generation
+    - Full MLflow experiment tracking integration
+
+Evaluation Metrics:
+    1. Classification Metrics
+       - Test accuracy, precision, recall, F1
+       - Confusion matrix visualization
+       
+    2. KSI v2.0 Metrics
+       - Total KSI score (0-100, higher = better match)
+       - Component breakdown (pose, velocity, acceleration)
+       - Phase-specific scores
+       - Per-joint error analysis
+       - Ranking hinge score for class separation
+
+Pipeline Position:
+    train_pose.py / train_hybrid.py → [evaluate.py] → reports/
+    
+    Loads trained model and test data, performs comprehensive evaluation,
+    and logs all metrics to MLflow for experiment tracking.
+
+Dependencies:
+    External: tensorflow, sklearn, matplotlib, seaborn, mlflow, numpy, yaml
+    Internal: ksi_v2.EnhancedKSI, mlflow_utils, natural_language_coach
+
+Configuration (params.yaml):
+    pose_pipeline / hybrid_pipeline:
+        model_path: Path to trained model
+        data_path: Path to evaluation data
+    ksi:
+        weights: Component weighting for KSI calculation
+
+Usage:
+    python evaluate.py pose          # Evaluate pose model
+    python evaluate.py hybrid --nlp  # Evaluate hybrid with NLP feedback
+
+Author: IPD Research Team
+Version: 2.0.0
+"""
+
 import argparse
 import os
 import yaml
@@ -12,12 +65,9 @@ from tensorflow.keras.utils import to_categorical
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix
 from typing import Dict
-# Local Imports - use ksi_v2 with enhanced features
-from ksi_v2 import (
-    EnhancedKSI,
-    ShotPhase,
-)
-from mlflow_utils import MLflowRunManager  # <--- NEW: Enhanced MLflow utilities
+from ksi_v2 import EnhancedKSI, ShotPhase
+from mlflow_utils import MLflowRunManager
+
 try:
     from natural_language_coach import generate_coaching_report
     NLP_AVAILABLE = True

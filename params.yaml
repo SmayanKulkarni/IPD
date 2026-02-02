@@ -25,7 +25,7 @@ pose_pipeline:
 hybrid_pipeline:
   data_path: "data/Data_Normalized_Hybrid"
   model_path: "models/tcn_hybrid_tuned.h5"  # Production: Optuna-tuned model
-  sequence_length: 40
+  sequence_length: 30
   stride: 5
   batch_size: 8
   epochs: 250

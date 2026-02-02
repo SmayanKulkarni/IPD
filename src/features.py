@@ -1,3 +1,50 @@
+"""
+Feature Extraction for Pose and Hybrid Pipelines
+=================================================
+
+Provides feature extraction classes for converting raw video frames into
+model-ready representations. Supports both pure pose and hybrid (pose+CNN)
+feature extraction strategies.
+
+Classes:
+    1. HybridFeatureExtractor
+       - Dual-stream feature extraction: 3D pose + CNN visual
+       - MobileNetV2 backbone with L2-normalized embeddings
+       - Pose-guided ROI cropping for focused visual features
+       - Temporal smoothing of bounding box for stability
+       
+    2. PoseFeatureExtractor
+       - Pure MediaPipe pose landmark extraction
+       - Geometric normalization to person-centric coordinates
+       - Suitable for pose-only classification pipeline
+
+Pose-Guided ROI Algorithm:
+    1. Detect full-body joints (shoulders → ankles)
+    2. Filter by visibility threshold (default: 0.5)
+    3. Compute bounding box with margin expansion
+    4. Apply temporal smoothing with previous frame's box
+    5. Fallback to full frame if insufficient joints detected
+
+CNN Architecture:
+    - Base: MobileNetV2 (ImageNet pretrained)
+    - Pooling: Global average
+    - Projection: Dense(cnn_dim) + ReLU
+    - Normalization: L2 on output embedding
+
+Dependencies:
+    External: cv2, numpy, mediapipe, tensorflow
+    Internal: utils.normalize_pose
+
+Configuration:
+    mp_config: MediaPipe Pose configuration
+    cnn_dim: Output dimension for CNN features (default: 128)
+    cnn_input_size: CNN input resolution (default: 224)
+    roi_cfg: Pose-guided ROI configuration
+
+Author: IPD Research Team
+Version: 1.0.0
+"""
+
 import cv2
 import os
 import numpy as np
@@ -7,7 +54,6 @@ from tensorflow.keras.applications import MobileNetV2
 from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 from tensorflow.keras.layers import Dense, Input, Lambda
 from tensorflow.keras.models import Model
-# Local import
 from utils import normalize_pose, should_skip_crop
 
 class HybridFeatureExtractor:

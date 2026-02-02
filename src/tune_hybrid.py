@@ -1,3 +1,57 @@
+"""
+Hyperparameter Tuning for Hybrid TCN Model
+===========================================
+
+Optuna-based hyperparameter optimization for the hybrid pose+CNN TCN classifier.
+Searches over architectural and training hyperparameters for the dual-input
+multi-stream architecture.
+
+Key Features:
+    - Bayesian hyperparameter search via Optuna
+    - Median pruner for early stopping of unpromising trials
+    - MLflow integration for trial tracking and comparison
+    - Automatic retraining with best hyperparameters
+    - Model registration to MLflow Model Registry
+
+Search Space:
+    Architecture:
+        - conv_filters: 48-160 (step 16)
+        - kernel_size: 3-7 (step 2)
+        - gru_units: [48, 64, 96, 128, 160]
+    
+    Regularization:
+        - dropout: 0.1-0.6
+        - l2_weight: 1e-6 to 1e-3 (log scale)
+    
+    Training:
+        - learning_rate: 1e-5 to 5e-3 (log scale)
+        - batch_size: [4, 8, 12, 16, 24, 32]
+
+Pipeline Position:
+    preprocess_hybrid.py → [tune_hybrid.py] → evaluate.py
+    
+    Alternative to train_hybrid.py for finding optimal hyperparameters
+    before production training.
+
+Dependencies:
+    External: optuna, tensorflow, sklearn, mlflow
+    Internal: None (model defined inline for flexibility)
+
+Configuration (params.yaml):
+    hybrid_pipeline:
+        data_path: Path to preprocessed hybrid data
+        cnn_feature_dim: CNN embedding dimension
+        epochs: Maximum epochs per trial (default: 250)
+    mlflow:
+        tracking_uri: MLflow tracking URI
+
+Usage:
+    python tune_hybrid.py --trials 50
+
+Author: IPD Research Team
+Version: 1.0.0
+"""
+
 import argparse
 import os
 import tempfile
