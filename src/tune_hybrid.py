@@ -71,6 +71,7 @@ from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.utils import to_categorical
+from sklearn.utils.class_weight import compute_class_weight
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
@@ -88,37 +89,78 @@ def load_hybrid_data(data_path: str):
 
 
 def build_hybrid_model(trial, pose_shape, cnn_shape, num_classes):
-    conv_filters = trial.suggest_int("conv_filters", 48, 160, step=16)
-    kernel_size = trial.suggest_int("kernel_size", 3, 7, step=2)
-    gru_units = trial.suggest_categorical("gru_units", [48, 64, 96, 128, 160])
-    dropout = trial.suggest_float("dropout", 0.1, 0.6)
-    l2_weight = trial.suggest_float("l2", 1e-6, 1e-3, log=True)
-    lr = trial.suggest_float("learning_rate", 1e-5, 5e-3, log=True)
+    """Build Attention-TCN model with Optuna-suggested hyperparameters."""
+    from tensorflow.keras.layers import Add, MultiHeadAttention, LayerNormalization
+
+    # --- Search Space ---
+    tcn_filters = trial.suggest_int("tcn_filters", 32, 96, step=16)
+    gru_units = trial.suggest_int("gru_units", 32, 96, step=16)
+    num_heads = trial.suggest_categorical("attn_heads", [2, 4, 8])
+    attn_key_dim = trial.suggest_categorical("attn_key_dim", [8, 16, 32])
+    dropout = trial.suggest_float("dropout", 0.2, 0.5)
+    attn_dropout = trial.suggest_float("attn_dropout", 0.1, 0.3)
+    l2_weight = trial.suggest_float("l2", 1e-5, 5e-3, log=True)
+    lr = trial.suggest_float("learning_rate", 1e-4, 5e-3, log=True)
+    label_smoothing = trial.suggest_float("label_smoothing", 0.0, 0.2)
+    fusion_units = trial.suggest_int("fusion_units", 32, 96, step=16)
+    n_dilations = trial.suggest_int("n_dilations", 2, 4)
 
     reg = l2(l2_weight)
 
+    # --- CNN/Visual Branch: Residual Dilated TCN + Attention ---
     cnn_in = Input(shape=cnn_shape, name="cnn_input")
-    x = Conv1D(conv_filters, kernel_size, padding="causal", dilation_rate=1, kernel_regularizer=reg)(cnn_in)
+    x = Conv1D(tcn_filters, 1, kernel_regularizer=reg)(cnn_in)
     x = BatchNormalization()(x)
     x = ReLU()(x)
-    x = SpatialDropout1D(dropout)(x)
-    x = Conv1D(conv_filters, kernel_size, padding="causal", dilation_rate=2, kernel_regularizer=reg)(x)
-    x = BatchNormalization()(x)
-    x = ReLU()(x)
-    x = SpatialDropout1D(dropout)(x)
+
+    dilations = [2**i for i in range(n_dilations)]
+    for d in dilations:
+        residual = x
+        x = Conv1D(tcn_filters, 3, padding="causal", dilation_rate=d, kernel_regularizer=reg)(x)
+        x = BatchNormalization()(x)
+        x = ReLU()(x)
+        x = SpatialDropout1D(dropout)(x)
+        from tensorflow.keras.layers import Add as AddLayer
+        x = AddLayer()([x, residual])
+
+    # Temporal Self-Attention
+    attn_out = MultiHeadAttention(num_heads=num_heads, key_dim=attn_key_dim, dropout=attn_dropout)(x, x)
+    x = Add()([x, attn_out])
+    x = LayerNormalization()(x)
+
     x = GRU(gru_units, dropout=dropout)(x)
     x = Dense(max(gru_units // 2, 32), activation="relu", kernel_regularizer=reg)(x)
     x = Dropout(dropout)(x)
 
+    # --- Pose Branch: Conv1D + Attention + GRU ---
     pose_in = Input(shape=pose_shape, name="pose_input")
-    y = GRU(gru_units, dropout=dropout)(pose_in)
+    y = Conv1D(tcn_filters, 3, padding="causal", activation="relu", kernel_regularizer=reg)(pose_in)
+    y = BatchNormalization()(y)
+    y = SpatialDropout1D(dropout)(y)
+
+    pose_attn = MultiHeadAttention(num_heads=num_heads, key_dim=attn_key_dim, dropout=attn_dropout)(y, y)
+    y = Add()([y, pose_attn])
+    y = LayerNormalization()(y)
+
+    y = GRU(gru_units, dropout=dropout)(y)
     y = BatchNormalization()(y)
     y = Dense(max(gru_units // 2, 32), activation="relu", kernel_regularizer=reg)(y)
     y = Dropout(dropout)(y)
 
-    out = Dense(num_classes, activation="softmax")(Concatenate()([x, y]))
+    # --- Fusion ---
+    fused = Concatenate()([x, y])
+    fused = Dense(fusion_units, activation="relu", kernel_regularizer=reg)(fused)
+    fused = Dropout(min(dropout + 0.1, 0.6))(fused)
+    fused = Dense(fusion_units // 2, activation="relu", kernel_regularizer=reg)(fused)
+    fused = Dropout(dropout)(fused)
+    out = Dense(num_classes, activation="softmax")(fused)
+
     model = Model([cnn_in, pose_in], out)
-    model.compile(optimizer=Adam(lr), loss="categorical_crossentropy", metrics=["accuracy"])
+    model.compile(
+        optimizer=Adam(lr),
+        loss=tf.keras.losses.CategoricalCrossentropy(label_smoothing=label_smoothing),
+        metrics=["accuracy"],
+    )
     return model
 
 
@@ -147,7 +189,11 @@ class HybridObjective:
             )
             y_cat = to_categorical(self.y, len(self.classes))
             model = build_hybrid_model(trial, self.X_pose.shape[1:], self.X_cnn.shape[1:], len(self.classes))
-            batch_size = trial.suggest_categorical("batch_size", [4, 8, 12, 16, 24, 32])
+            batch_size = trial.suggest_categorical("batch_size", [4, 8, 16, 32])
+
+            # Compute class weights
+            cw = compute_class_weight('balanced', classes=np.unique(self.y[idx_train]), y=self.y[idx_train])
+            class_weight_dict = dict(enumerate(cw))
 
             ckpt_dir = tempfile.mkdtemp()
             ckpt_path = os.path.join(ckpt_dir, "hybrid_best.h5")
@@ -164,6 +210,7 @@ class HybridObjective:
                 epochs=self.cfg.get("epochs", 250),
                 batch_size=batch_size,
                 callbacks=callbacks,
+                class_weight=class_weight_dict,
                 verbose=0,
                 shuffle=True,
             )

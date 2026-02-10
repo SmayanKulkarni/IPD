@@ -4,14 +4,35 @@ Evaluate a single video file with KSI metrics and natural language coaching.
 Supports both file paths and real-time webcam input.
 """
 
-import argparse
+# --- DETERMINISM FIXES (MUST BE BEFORE TF IMPORT) ---
 import os
+import sys
+
+# Check for GPU flag early (before TF imports)
+_use_gpu = '--gpu' in sys.argv
+
+if not _use_gpu:
+    # Force CPU mode for deterministic predictions
+    os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+    os.environ['MEDIAPIPE_DISABLE_GPU'] = '1'
+    print("🔒 Running in CPU mode for deterministic predictions (use --gpu to enable GPU)")
+
+os.environ['TF_DETERMINISTIC_OPS'] = '1'
+os.environ['TF_CUDNN_DETERMINISTIC'] = '1'
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+
+import argparse
 import yaml
 import cv2
 import numpy as np
 from collections import deque
+import tensorflow as tf
 from tensorflow.keras.models import load_model
 from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
+
+# Disable GPU visibility in TF if CPU mode (double check)
+if not _use_gpu:
+    tf.config.set_visible_devices([], 'GPU')
 import mediapipe as mp
 
 from ksi_v2 import EnhancedKSI, ShotPhase
@@ -190,7 +211,12 @@ def extract_features_from_video(video_source, extractor, params, pipeline_type='
     cfg = params['hybrid_pipeline']
     seq_len = cfg['sequence_length']
     cnn_dim = cfg['cnn_feature_dim']
-    crop_cfg = resolve_crop_config_for_video(video_source, params)
+    
+    # Correctly resolve crop config
+    base_crop = cfg.get('crop_config', {})
+    overrides = params.get('crop_overrides', {})
+    crop_cfg = resolve_crop_config_for_video(video_source, base_crop, overrides)
+    
     roi_cfg = cfg.get("cnn_roi") or {}
     
     # Use extractor's pose model
@@ -288,7 +314,7 @@ def extract_features_from_video(video_source, extractor, params, pipeline_type='
     if not filtered_windows:
         raise RuntimeError("All windows were filtered out due to low pose quality; try a clearer video")
     
-    print(f"✅ Extracted {frame_count} frames into {len(filtered_windows)} valid windows (from {len(all_windows)} total)")
+    print(f" Extracted {frame_count} frames into {len(filtered_windows)} valid windows (from {len(all_windows)} total)")
     print(f"   Window shape: {filtered_windows[0].shape}")
     print(f"   Landmarks shape: {filtered_landmarks[0].shape}")
     
@@ -453,7 +479,8 @@ def evaluate_video(
     extractor = HybridFeatureExtractor(
         mp_config=mp_config,
         cnn_dim=cfg['cnn_feature_dim'],
-        cnn_input_size=cfg['cnn_input_size']
+        cnn_input_size=cfg['cnn_input_size'],
+        rsn_weights_path=cfg.get('rsn_pretrained_weights'),
     )
     
     # Get sequence parameters
@@ -522,7 +549,14 @@ def evaluate_video(
     print(f"CALCULATING KSI METRICS")
     print(f"{'='*70}")
     
-    templates = load_expert_templates(params)
+    try:
+        templates = load_expert_templates(params)
+    except FileNotFoundError:
+        print("⚠️  Expert templates not found (data/expert_templates.npz).")
+        print("   Skipping KSI metrics and coaching report.")
+        print("   Run 'dvc repro generate_templates' to output templates.")
+        return
+
     ksi_calc = EnhancedKSI()
     
     # Get expert template for consensus class
@@ -615,6 +649,7 @@ if __name__ == "__main__":
                         choices=['beginner', 'intermediate', 'advanced', 'expert'],
                         help="Skill level for coaching (default: intermediate)")
     parser.add_argument("--no-report", action='store_true', help="Skip coaching report generation")
+    parser.add_argument("--gpu", action='store_true', help="Use GPU for inference (faster but less deterministic)")
     
     args = parser.parse_args()
     

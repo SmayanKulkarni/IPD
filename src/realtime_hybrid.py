@@ -1,6 +1,26 @@
-import argparse
+"""Real-time hybrid inference with determinism fixes.
+
+For consistent predictions on unseen real-time input, this script runs
+on CPU by default. Use --gpu to enable GPU acceleration (less deterministic).
+"""
+# --- DETERMINISM FIXES (MUST BE BEFORE TF IMPORT) ---
 import os
 import sys
+
+# Check for GPU flag early (before TF imports)
+_use_gpu = '--gpu' in sys.argv
+
+if not _use_gpu:
+    # Force CPU mode for deterministic predictions
+    os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+    os.environ['MEDIAPIPE_DISABLE_GPU'] = '1'  # Force MediaPipe CPU-only
+    print("🔒 Running in CPU mode for deterministic predictions (use --gpu to enable GPU)")
+
+os.environ['TF_DETERMINISTIC_OPS'] = '1'
+os.environ['TF_CUDNN_DETERMINISTIC'] = '1'
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'  # Disable oneDNN for consistency
+
+import argparse
 import time
 from collections import deque
 
@@ -14,6 +34,10 @@ except Exception:  # pragma: no cover
     yaml = None
 
 import tensorflow as tf
+
+# Disable GPU if CPU mode
+if not _use_gpu:
+    tf.config.set_visible_devices([], 'GPU')
 
 from features import HybridFeatureExtractor
 from utils import should_skip_crop, resolve_crop_config_for_video
@@ -121,6 +145,45 @@ def _detect_contact_realtime(landmarks_buffer):
     return np.argmax(composite_vel)
 
 
+# --- PREDICTION SMOOTHING FOR STABLE REAL-TIME OUTPUT ---
+CONFIDENCE_THRESHOLD = 0.5  # Minimum confidence to show prediction
+
+
+class PredictionSmoother:
+    """Smooths predictions using EMA and temporal voting for stable real-time output."""
+    
+    def __init__(self, num_classes: int, ema_alpha: float = 0.6, history_len: int = 5):
+        self.num_classes = num_classes
+        self.ema_alpha = ema_alpha
+        self.ema_probs = np.ones(num_classes) / num_classes
+        self.prediction_history = deque(maxlen=history_len)
+    
+    def update(self, raw_probs: np.ndarray) -> tuple:
+        """Update with new predictions and return smoothed result.
+        
+        Returns:
+            (smoothed_probs, majority_class_idx, confidence_level)
+        """
+        # EMA smoothing
+        self.ema_probs = self.ema_alpha * raw_probs + (1 - self.ema_alpha) * self.ema_probs
+        
+        # Track prediction history for voting
+        predicted_class = int(np.argmax(raw_probs))
+        self.prediction_history.append(predicted_class)
+        
+        # Majority voting
+        from collections import Counter
+        vote_counts = Counter(self.prediction_history)
+        majority_class = vote_counts.most_common(1)[0][0]
+        vote_confidence = vote_counts[majority_class] / len(self.prediction_history)
+        
+        return self.ema_probs, majority_class, vote_confidence
+    
+    def reset(self):
+        self.ema_probs = np.ones(self.num_classes) / self.num_classes
+        self.prediction_history.clear()
+
+
 def _prepare_model_inputs(model: tf.keras.Model, x_fused: np.ndarray, cnn_dim: int):
     """Prepare inputs for different historical model signatures.
 
@@ -192,6 +255,11 @@ def main():
         default=200,
         help="Frames to process in --headless mode",
     )
+    parser.add_argument(
+        "--gpu",
+        action="store_true",
+        help="Use GPU for inference (faster but less deterministic). CPU is default for consistent results.",
+    )
     args = parser.parse_args()
 
     params = _load_params(args.params)
@@ -217,10 +285,20 @@ def main():
         mp_cfg,
         cnn_dim=cnn_dim,
         cnn_input_size=int(cfg.get("cnn_input_size", 224)),
+        rsn_weights_path=cfg.get("rsn_pretrained_weights"),
     )
 
     try:
         model = tf.keras.models.load_model(model_path)
+        
+        # ─────────────── WARMUP INFERENCE ───────────────
+        # Run dummy predictions to stabilize GPU/XLA before real processing
+        print("🔥 Warming up model...")
+        dummy_cnn = np.zeros((1, seq_len, cnn_dim), dtype=np.float32)
+        dummy_pose = np.zeros((1, seq_len, 99), dtype=np.float32)
+        for _ in range(3):  # Multiple warmup passes
+            _ = model.predict([dummy_cnn, dummy_pose], verbose=0)
+        print("✅ Model warmup complete")
 
         cap, is_webcam = _open_capture(args.source)
         if not cap.isOpened():
@@ -241,6 +319,10 @@ def main():
         last_box = None
         
         contact_frame_idx = -1  # Index in window where contact occurs
+        
+        # Initialize prediction smoother
+        num_classes = len(classes) if classes else 6
+        smoother = PredictionSmoother(num_classes, ema_alpha=0.6, history_len=5)
 
         prev_tick = time.time()
         shown_fps = 0.0
@@ -310,14 +392,26 @@ def main():
                 x = np.asarray(window, dtype=np.float32)[None, ...]
 
                 model_inputs = _prepare_model_inputs(model, x_fused=x, cnn_dim=cnn_dim)
-                probs = model.predict(model_inputs, verbose=0)[0]
+                raw_probs = model.predict(model_inputs, verbose=0)[0]
+                
+                # Apply prediction smoothing
+                smoothed_probs, majority_class, vote_confidence = smoother.update(raw_probs)
+                
                 topk = max(1, int(args.topk))
-                top_idx = np.argsort(probs)[::-1][:topk]
+                top_idx = np.argsort(smoothed_probs)[::-1][:topk]
+                max_conf = float(smoothed_probs[top_idx[0]])
 
                 pred_text_lines = []
-                for j, idx in enumerate(top_idx):
-                    name = classes[idx] if classes and idx < len(classes) else f"class_{int(idx)}"
-                    pred_text_lines.append(f"{j+1}. {name}: {float(probs[idx]):.3f}")
+                
+                # Show prediction only if confidence exceeds threshold
+                if max_conf >= CONFIDENCE_THRESHOLD:
+                    for j, idx in enumerate(top_idx):
+                        name = classes[idx] if classes and idx < len(classes) else f"class_{int(idx)}"
+                        # Add voting indicator for top prediction
+                        vote_marker = f" [V:{vote_confidence:.0%}]" if j == 0 else ""
+                        pred_text_lines.append(f"{j+1}. {name}: {float(smoothed_probs[idx]):.3f}{vote_marker}")
+                else:
+                    pred_text_lines.append(f"Uncertain (conf: {max_conf:.2f})")
                 
                 # Mark contact frame
                 contact_indicator = f" [Contact: frame {contact_frame_idx+1}/{seq_len}]"
@@ -365,6 +459,30 @@ def main():
             h, w = frame_in.shape[:2]
             top_off = int(h * float(crop_cfg.get("top", 0.0))) if not skip_crop else 0
             left_off = int(w * float(crop_cfg.get("left", 0.0))) if not skip_crop else 0
+            bottom_off = int(h * float(crop_cfg.get("bottom", 0.0))) if not skip_crop else 0
+            right_off = int(w * float(crop_cfg.get("right", 0.0))) if not skip_crop else 0
+
+            # Draw crop boundary visualization (red overlay on cropped-out regions)
+            if not skip_crop and (top_off > 0 or bottom_off > 0 or left_off > 0 or right_off > 0):
+                # Semi-transparent red overlay on cropped regions
+                crop_overlay = overlay.copy()
+                if top_off > 0:
+                    cv2.rectangle(crop_overlay, (0, 0), (w, top_off), (0, 0, 200), -1)
+                if bottom_off > 0:
+                    cv2.rectangle(crop_overlay, (0, h - bottom_off), (w, h), (0, 0, 200), -1)
+                if left_off > 0:
+                    cv2.rectangle(crop_overlay, (0, 0), (left_off, h), (0, 0, 200), -1)
+                if right_off > 0:
+                    cv2.rectangle(crop_overlay, (w - right_off, 0), (w, h), (0, 0, 200), -1)
+                # Blend with 30% opacity
+                overlay = cv2.addWeighted(crop_overlay, 0.3, overlay, 0.7, 0)
+                # Draw crop boundary lines
+                cv2.line(overlay, (0, top_off), (w, top_off), (0, 0, 255), 2)
+                cv2.line(overlay, (0, h - bottom_off), (w, h - bottom_off), (0, 0, 255), 2)
+                # Show crop info text
+                crop_text = f"CROP: bottom={crop_cfg.get('bottom', 0.0):.0%}"
+                cv2.putText(overlay, crop_text, (10, h - bottom_off - 10), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2, cv2.LINE_AA)
 
             if box is not None and not skip_crop:
                 # Map box from cropped coords to original frame coords

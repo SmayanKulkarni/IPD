@@ -1,6 +1,7 @@
 Data_Normalized/
 Data_Normalized_Hybrid/
 data/expert_data/
+data/rsn_frames
 mlruns/
 dvclive/
 .vscode/

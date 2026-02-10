@@ -5,17 +5,17 @@ stages:
     deps:
     - path: data/expert_data
       hash: md5
-      md5: 920dfb3fc9a99187a76695b97829e560.dir
-      size: 290106468
-      nfiles: 112
+      md5: 60ece5a3c0513abf4568b19710caacca.dir
+      size: 174090586
+      nfiles: 61
     - path: src/features.py
       hash: md5
-      md5: 2b67e870c3c32c4e641f9e27c66c0073
-      size: 10167
+      md5: ec2e1b8f18bf8cd98d03423aa75d033e
+      size: 11910
     - path: src/generate_templates.py
       hash: md5
-      md5: bfc3dedc0af2992219ac5756a5562748
-      size: 2584
+      md5: c3f55e1f4fac692ac62585295dba202a
+      size: 24224
     - path: src/ksi_v2.py
       hash: md5
       md5: 825801940bc3f5f3e9bc3fc9d732b6de
@@ -32,8 +32,8 @@ stages:
     outs:
     - path: data/expert_templates.npz
       hash: md5
-      md5: 1266a209e0efdab5446e42999aa764ef
-      size: 30872
+      md5: a511c46edfc9704ecf72710a7e3b4c27
+      size: 530918
   preprocess_pose:
     cmd: python src/preprocess_pose.py
     deps:
@@ -585,25 +585,26 @@ stages:
       md5: 41afdf075415b140d0a0a844da7b6b54
       size: 883920
   preprocess_production:
-    cmd: python src/preprocess_hybrid.py
+    cmd: /home/smayan/Desktop/AI-ML-DS/AI-and-ML-Course/.conda/bin/python 
+      src/preprocess_hybrid.py
     deps:
     - path: data/raw
       hash: md5
-      md5: b8c7603c23fb1528b9e28f7c7621f87d.dir
-      size: 754972081
-      nfiles: 556
+      md5: dd42292ebf689687a6aa388b819c1076.dir
+      size: 694730733
+      nfiles: 538
     - path: src/features.py
       hash: md5
-      md5: 2b67e870c3c32c4e641f9e27c66c0073
-      size: 10167
+      md5: b7c9b123ca02e062cd1293de414469f3
+      size: 11976
     - path: src/preprocess_hybrid.py
       hash: md5
-      md5: b98edd4c6191e91cbc5ad2c1de52389b
-      size: 6564
+      md5: 802e1892ea1d6b7a72cdb76bc930979d
+      size: 11150
     - path: src/utils.py
       hash: md5
-      md5: c7d3df498d22dc40c96332eb690370ff
-      size: 6187
+      md5: e17bac27f34ac80ab24582d24b85bd01
+      size: 8000
     params:
       params.yaml:
         crop_overrides:
@@ -697,14 +698,15 @@ stages:
         hybrid_pipeline:
           data_path: data/Data_Normalized_Hybrid
           model_path: models/tcn_hybrid_tuned.h5
-          sequence_length: 40
+          sequence_length: 30
           stride: 5
           batch_size: 8
           epochs: 250
           cnn_feature_dim: 64
           cnn_input_size: 224
+          rsn_pretrained_weights: models/rsn_pretrained.h5
           cnn_roi:
-            enabled: true
+            enabled: false
             joint_ids:
             - 11
             - 12
@@ -722,14 +724,14 @@ stages:
             min_joints: 4
             margin: 0.35
             min_size_frac: 0.65
-            smoothing: 0.3
+            smoothing: 0.7
             fallback_full_frame: true
             use_last_box_on_missing_pose: true
           crop_config:
-            top: 0.13
-            bottom: 0.35
-            left: 0.25
-            right: 0.25
+            top: 0.0
+            bottom: 0.0
+            left: 0.0
+            right: 0.0
         mediapipe:
           model_complexity: 1
           min_detection_confidence: 0.3
@@ -744,35 +746,35 @@ stages:
     outs:
     - path: data/Data_Normalized_Hybrid
       hash: md5
-      md5: a2eca1359277a0f5223653ca10b37588.dir
-      size: 288015172
-      nfiles: 3937
+      md5: 79bbc35cd7f3a282d46d523aa48e68d8.dir
+      size: 42296982
+      nfiles: 1313
   evaluate_production:
     cmd: python src/evaluate.py --type hybrid --model models/tcn_hybrid_tuned.h5
     deps:
     - path: data/Data_Normalized_Hybrid
       hash: md5
-      md5: a2eca1359277a0f5223653ca10b37588.dir
-      size: 288015172
-      nfiles: 3937
+      md5: 76a18890a8f1f6d9c87bbf8b4b7c7692.dir
+      size: 42296982
+      nfiles: 1313
     - path: data/expert_templates.npz
       hash: md5
-      md5: 1266a209e0efdab5446e42999aa764ef
-      size: 30872
+      md5: a511c46edfc9704ecf72710a7e3b4c27
+      size: 530918
     - path: models/tcn_hybrid_tuned.h5
       hash: md5
-      md5: 41afdf075415b140d0a0a844da7b6b54
-      size: 883920
+      md5: 8d7693e24aab1580ac2247077951b6f7
+      size: 3355696
     - path: src/evaluate.py
       hash: md5
-      md5: 473be9775d7f4a9478f9c8b96ef60996
-      size: 14833
+      md5: 93f50a06d01d2874e2bc4ba49c3f3690
+      size: 27604
     outs:
     - path: dvclive/production_confusion_matrix.png
       hash: md5
-      md5: 97bf25e606de9f8f9627fef4d0f19569
-      size: 35983
+      md5: 5617ce0d20d4916f27922953a06317b7
+      size: 35597
     - path: dvclive/production_metrics.json
       hash: md5
-      md5: 78bef237586bd542058e0b36b0c4c6d8
-      size: 236
+      md5: c428e3f5ceccc661ae4a25fc25e37d58
+      size: 642

@@ -52,6 +52,42 @@ Author: IPD Research Team
 Version: 2.0.0
 """
 
+"""
+# --- DETERMINISM FIXES (MUST BE BEFORE TF IMPORT) ---
+import os
+import sys
+
+# Check for GPU flag early (before TF imports)
+_use_gpu = '--gpu' in sys.argv
+
+if not _use_gpu:
+    # Force CPU mode for deterministic predictions
+    os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+    os.environ['MEDIAPIPE_DISABLE_GPU'] = '1'
+    print("🔒 Running in CPU mode for deterministic predictions (use --gpu to enable GPU)")
+
+os.environ['TF_DETERMINISTIC_OPS'] = '1'
+os.environ['TF_CUDNN_DETERMINISTIC'] = '1'
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+
+"""
+# --- DETERMINISM FIXES (MUST BE BEFORE TF IMPORT) ---
+import os
+import sys
+
+# Check for GPU flag early (before TF imports)
+_use_gpu = '--gpu' in sys.argv
+
+if not _use_gpu:
+    # Force CPU mode for deterministic predictions
+    os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+    os.environ['MEDIAPIPE_DISABLE_GPU'] = '1'
+    print("🔒 Running in CPU mode for deterministic predictions (use --gpu to enable GPU)")
+
+os.environ['TF_DETERMINISTIC_OPS'] = '1'
+os.environ['TF_CUDNN_DETERMINISTIC'] = '1'
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+
 import argparse
 import os
 import yaml
@@ -550,5 +586,6 @@ if __name__ == "__main__":
                         help="Max number of samples to generate detailed feedback for (default: 5)")
     parser.add_argument("--auto-name", action='store_true', 
                         help="Auto-generate MLflow run name without prompting")
+    parser.add_argument("--gpu", action='store_true', help="Use GPU for inference (faster but less deterministic)")
     args = parser.parse_args()
     evaluate(args.type, args.model, args.nlp, args.nlp_skill, args.nlp_samples, args.auto_name, args.data)

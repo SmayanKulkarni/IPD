@@ -1,0 +1,6 @@
+backhand_drive
+backhand_net_shot
+forehand_clear
+forehand_drive
+forehand_lift
+forehand_net_shot

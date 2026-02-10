@@ -50,17 +50,16 @@ import os
 import numpy as np
 import mediapipe as mp
 import tensorflow as tf
-from tensorflow.keras.applications import MobileNetV2
-from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 from tensorflow.keras.layers import Dense, Input, Lambda
 from tensorflow.keras.models import Model
 from utils import normalize_pose, should_skip_crop
+from rsn import build_rsn_feature_extractor
 
 class HybridFeatureExtractor:
-    def __init__(self, mp_config, cnn_dim=128, cnn_input_size=224):
+    def __init__(self, mp_config, cnn_dim=128, cnn_input_size=224, rsn_weights_path=None):
         self.mp_pose = mp.solutions.pose
         self.pose = self.mp_pose.Pose(
-            static_image_mode=False, 
+            static_image_mode=True,  # Use static mode for deterministic results
             model_complexity=mp_config['model_complexity'],
             min_detection_confidence=mp_config['min_detection_confidence'],
             min_tracking_confidence=mp_config['min_tracking_confidence']
@@ -68,21 +67,19 @@ class HybridFeatureExtractor:
         
         # CNN Setup
         self.cnn_input_size = int(cnn_input_size)
-        base_cnn = MobileNetV2(
-            weights='imagenet',
-            include_top=False,
-            pooling='avg',
+        self.cnn_dim = int(cnn_dim)
+        
+        # Build CNN Backbone (Residual-Shuffle Network)
+        print("🔧 Initializing Residual-Shuffle Network (RSN) backbone...")
+        self.rgb_model = build_rsn_feature_extractor(
             input_shape=(self.cnn_input_size, self.cnn_input_size, 3),
+            feature_dim=self.cnn_dim,
+            weights_path=rsn_weights_path
         )
+        print(f"✅ RSN ready: output dim = {self.cnn_dim}")
 
-        img_in = Input(shape=(self.cnn_input_size, self.cnn_input_size, 3))
-        x = base_cnn(img_in, training=False)
-        x = Dense(cnn_dim, activation='relu')(x)
-        x = Lambda(lambda t: tf.nn.l2_normalize(t, axis=-1))(x)
-        self.rgb_model = Model(inputs=img_in, outputs=x)
-
-        # Backwards-compatible attributes (older code used base_cnn + cnn_model separately)
-        self.base_cnn = base_cnn
+        # Backwards-compatible attributes
+        self.base_cnn = self.rgb_model
         self.cnn_model = self.rgb_model
 
     @staticmethod
@@ -118,76 +115,85 @@ class HybridFeatureExtractor:
         use_last_on_missing = roi_cfg.get('use_last_box_on_missing_pose', True)
 
         # ─────────────── Gather valid landmarks ───────────────
-        if pose_landmarks is None:
-            if use_last_on_missing and last_box is not None:
-                return last_box
-            if fallback_full_frame:
-                return (0, 0, int(width), int(height))
-            return None
+        # ─────────────── TORSO-ANCHORED LOGIC ───────────────
+        # Identify torso joints: Shoulders(11,12) and Hips(23,24) defined in MediaPipe
+        # We use these to stabilize the center.
+        torso_ids = [11, 12, 23, 24]
+        
+        txs, tys = [], []
+        all_xs, all_ys = [], []
 
-        xs = []
-        ys = []
         for j in joint_ids:
             try:
                 lm = pose_landmarks.landmark[int(j)]
             except Exception:
                 continue
-            if lm is None:
+            if getattr(lm, 'visibility', 1.0) < visibility_thresh:
                 continue
-            vis = getattr(lm, 'visibility', 1.0)
-            if vis < visibility_thresh:
-                continue
-            if not np.isfinite(lm.x) or not np.isfinite(lm.y):
-                continue
-            xs.append(lm.x * float(width))
-            ys.append(lm.y * float(height))
+                
+            px, py = lm.x * width, lm.y * height
+            all_xs.append(px)
+            all_ys.append(py)
+            
+            if j in torso_ids:
+                txs.append(px)
+                tys.append(py)
 
-        # Not enough visible joints → fallback
-        if len(xs) < min_joints:
-            if use_last_on_missing and last_box is not None:
-                return last_box
-            if fallback_full_frame:
-                return (0, 0, int(width), int(height))
-            return None
+        # Fallback if insufficient joints
+        if len(all_xs) < min_joints:
+             if use_last_on_missing and last_box is not None: return last_box
+             if fallback_full_frame: return (0, 0, int(width), int(height))
+             return None
 
-        x1 = float(np.min(xs))
-        x2 = float(np.max(xs))
-        y1 = float(np.min(ys))
-        y2 = float(np.max(ys))
+        # 1. Determine Box Center (Stable)
+        # If we have torso joints, use them for the center. If not, use all joints.
+        if len(txs) >= 2:
+            cx = np.mean(txs)
+            cy = np.mean(tys)
+        else:
+            cx = np.mean(all_xs)
+            cy = np.mean(all_ys)
 
-        # ─────────────── Expand by margin ───────────────
-        bw = max(1.0, x2 - x1)
-        bh = max(1.0, y2 - y1)
-        x1 -= bw * margin
-        x2 += bw * margin
-        y1 -= bh * margin
-        y2 += bh * margin
+        # 2. Determine Box Scale (Dynamic to include all limbs)
+        # Find max extent from center to any visible joint
+        # This ensures we encompass the racket arm / feet even if they stretch far
+        max_dx = max([abs(x - cx) for x in all_xs])
+        max_dy = max([abs(y - cy) for y in all_ys])
+        
+        # Base dimensions (2 * extent)
+        w_box = 2 * max_dx
+        h_box = 2 * max_dy
+        
+        # 3. Apply Margin & Minimum Size
+        # Minimum size based on frame fraction
+        min_w = float(width) * min_size_frac
+        min_h = float(height) * min_size_frac
+        
+        w_box = max(w_box * (1 + margin), min_w)
+        h_box = max(h_box * (1 + margin), min_h)
 
-        # ─────────────── Enforce minimum size ───────────────
-        min_size = min(float(width), float(height)) * min_size_frac
-        if (x2 - x1) < min_size:
-            cx = 0.5 * (x1 + x2)
-            x1 = cx - 0.5 * min_size
-            x2 = cx + 0.5 * min_size
-        if (y2 - y1) < min_size:
-            cy = 0.5 * (y1 + y2)
-            y1 = cy - 0.5 * min_size
-            y2 = cy + 0.5 * min_size
+        # 4. Convert to corners
+        x1 = cx - w_box / 2
+        x2 = cx + w_box / 2
+        y1 = cy - h_box / 2
+        y2 = cy + h_box / 2
 
-        # ─────────────── Temporal smoothing ───────────────
+        # 5. Temporal Smoothing (EMA)
+        # CRITICAL: Even with smoothing > 0, we can be deterministic if the sequence is deterministic.
+        # This significantly reduces jitter.
         if last_box is not None and smoothing > 0:
             lx1, ly1, lx2, ly2 = last_box
-            alpha = 1.0 - smoothing
-            x1 = alpha * x1 + smoothing * lx1
-            y1 = alpha * y1 + smoothing * ly1
-            x2 = alpha * x2 + smoothing * lx2
-            y2 = alpha * y2 + smoothing * ly2
+            x1 = lx1 * smoothing + x1 * (1 - smoothing)
+            y1 = ly1 * smoothing + y1 * (1 - smoothing)
+            x2 = lx2 * smoothing + x2 * (1 - smoothing)
+            y2 = ly2 * smoothing + y2 * (1 - smoothing)
 
-        # ─────────────── Clamp to frame ───────────────
+        # 6. Clamp to image bounds
         x1i = self._clamp_int(x1, 0, width - 1)
         y1i = self._clamp_int(y1, 0, height - 1)
         x2i = self._clamp_int(x2, x1i + 1, width)
         y2i = self._clamp_int(y2, y1i + 1, height)
+        
         return (x1i, y1i, x2i, y2i)
 
     @staticmethod
@@ -257,7 +263,7 @@ class PoseFeatureExtractor:
     def __init__(self, mp_config):
         self.mp_pose = mp.solutions.pose
         self.pose = self.mp_pose.Pose(
-            static_image_mode=False, 
+            static_image_mode=True,  # Use static mode for reliability/determinism
             model_complexity=mp_config['model_complexity'],
             min_detection_confidence=mp_config['min_detection_confidence'],
             min_tracking_confidence=mp_config['min_tracking_confidence']

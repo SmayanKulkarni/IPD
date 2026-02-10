@@ -16,23 +16,24 @@ pose_pipeline:
   batch_size: 16
   epochs: 80
   crop_config: 
-    top: 0.13
-    bottom: 0.35
-    left: 0.25
-    right: 0.25
+    top: 0.0
+    bottom: 0.0
+    left: 0.0
+    right: 0.0
 
 # --- HYBRID PIPELINE (TCN) - PRODUCTION MODEL ---
 hybrid_pipeline:
   data_path: "data/Data_Normalized_Hybrid"
-  model_path: "models/tcn_hybrid_tuned.h5"  # Production: Optuna-tuned model
+  model_path: "models/tcn_hybrid.h5"  # Non-tuned model (Baseline)
   sequence_length: 30
   stride: 5
   batch_size: 8
   epochs: 250
   cnn_feature_dim: 64
   cnn_input_size: 224
+  rsn_pretrained_weights: "models/rsn_pretrained.h5"  # Stage 1 trained weights (set to null if not trained)
   cnn_roi:
-    enabled: true
+    enabled: false
     # MediaPipe pose landmark indices used to localize the action region.
     # Full-body: shoulders (11-12), elbows (13-14), wrists (15-16),
     #            hips (23-24), knees (25-26), ankles (27-28).
@@ -41,14 +42,14 @@ hybrid_pipeline:
     min_joints: 4               # fallback if fewer joints detected
     margin: 0.35                # expand box by 35% on each side
     min_size_frac: 0.65         # box is at least 65% of frame size
-    smoothing: 0.3              # EMA smoothing towards previous box (0=none)
+    smoothing: 0.7              # Strong filtering for stability (deterministic in CPU mode)
     fallback_full_frame: true   # use full frame if pose is missing/noisy
     use_last_box_on_missing_pose: true
   crop_config:
-    top: 0.13
-    bottom: 0.35
-    left: 0.25
-    right: 0.25
+    top: 0.0
+    bottom: 0.0
+    left: 0.0
+    right: 0.0
 
 # --- EXPERT TEMPLATES ---
 expert_pipeline:
@@ -63,13 +64,11 @@ ksi:
 
 # --- SEGMENT RULES ---
 # Controls which part of the clip is processed
+# NOTE: All classes use the SAME segment length (2.0s) to prevent sample imbalance.
+# Previously forehand_clear/forehand_lift had longer segments, generating 2x more windows.
 segment_rules:
-  default_seconds: 1.75   # fallback window (tail)
-  tail_seconds: 2.0       # tail window for listed shots
-  tail_shots:
-    - forehand_clear
-  middle_shots:           # shot -> seconds (centered window)
-    forehand_lift: 2.0
+  default_seconds: 2.0    # uniform window for all classes (tail)
+  max_windows_per_video: 3  # cap windows per video to prevent long-video bias
 
 # --- CROP OVERRIDES (By video number) ---
 # Applies only when cropping is enabled (i.e., not files like "name (N).mp4").
@@ -77,43 +76,43 @@ segment_rules:
 # If multiple ranges match, the last matching range wins.
 crop_overrides:
   forehand_drive:
-    - { start: 1, end: 24, bottom: 0.50 }
-    - { start: 24, end: 42, bottom: 0.45 }
-    - { start: 42, end: 58, bottom: 0.40 }
-    - { start: 58, end: 88, bottom: 0.40 }
-    - { start: 88, end: 100, bottom: 0.50 }
+    - { start: 1, end: 24, bottom: 0.50, top: 0.10, left: 0.25, right: 0.25 }
+    - { start: 24, end: 42, bottom: 0.45, top: 0.10, left: 0.25, right: 0.25 }
+    - { start: 42, end: 58, bottom: 0.40, top: 0.10, left: 0.25, right: 0.25 }
+    - { start: 58, end: 88, bottom: 0.40, top: 0.10, left: 0.25, right: 0.25 }
+    - { start: 88, end: 100, bottom: 0.50, top: 0.10, left: 0.25, right: 0.25 }
 
   backhand_drive:
-    - { start: 1, end: 38, bottom: 0.45 }
-    - { start: 38, end: 100, bottom: 0.40 }
+    - { start: 1, end: 38, bottom: 0.45, top: 0.10, left: 0.25, right: 0.25 }
+    - { start: 38, end: 100, bottom: 0.40, top: 0.10, left: 0.25, right: 0.25 }
 
   backhand_net_shot:
-    - { start: 1, end: 6, bottom: 0.50 }
-    - { start: 7, end: 34, bottom: 0.40 }
-    - { start: 35, end: 44, bottom: 0.35 }
-    - { start: 45, end: 70, bottom: 0.45 }
-    - { start: 71, end: 100, bottom: 0.35 }
+    - { start: 1, end: 6, bottom: 0.50, top: 0.10, left: 0.25, right: 0.25 }
+    - { start: 7, end: 34, bottom: 0.40, top: 0.10, left: 0.25, right: 0.25 }
+    - { start: 35, end: 44, bottom: 0.35, top: 0.10, left: 0.25, right: 0.25 }
+    - { start: 45, end: 70, bottom: 0.45, top: 0.10, left: 0.25, right: 0.25 }
+    - { start: 71, end: 100, bottom: 0.35, top: 0.10, left: 0.25, right: 0.25 }
 
   forehand_clear:
-    - { start: 1, end: 27, bottom: 0.48 }
-    - { start: 28, end: 98, bottom: 0.40 }
-    - { start: 99, end: 100, bottom: 0.45 }
+    - { start: 1, end: 27, bottom: 0.48, top: 0.10, left: 0.25, right: 0.25 }
+    - { start: 28, end: 98, bottom: 0.40, top: 0.10, left: 0.25, right: 0.25 }
+    - { start: 99, end: 100, bottom: 0.45, top: 0.10, left: 0.25, right: 0.25 }
 
   forehand_lift:
-    - { start: 1, end: 25, bottom: 0.40 }
-    - { start: 26, end: 38, bottom: 0.45 }
-    - { start: 39, end: 47, bottom: 0.37 }
-    - { start: 48, end: 59, bottom: 0.40 }
-    - { start: 60, end: 72, bottom: 0.45 }
-    - { start: 73, end: 100, bottom: 0.37 }
+    - { start: 1, end: 25, bottom: 0.45, top: 0.10, left: 0.25, right: 0.25 }
+    - { start: 26, end: 38, bottom: 0.45, top: 0.10, left: 0.25, right: 0.25 }
+    - { start: 39, end: 47, bottom: 0.37, top: 0.10, left: 0.25, right: 0.25 }
+    - { start: 48, end: 59, bottom: 0.40, top: 0.10, left: 0.25, right: 0.25 }
+    - { start: 60, end: 72, bottom: 0.45, top: 0.10, left: 0.25, right: 0.25 }
+    - { start: 73, end: 100, bottom: 0.37, top: 0.10, left: 0.25, right: 0.25 }
 
   forehand_net_shot:
-    - { start: 1, end: 11, bottom: 0.50 }
-    - { start: 11, end: 42, bottom: 0.40 }
-    - { start: 43, end: 51, bottom: 0.37 }
-    - { start: 52, end: 63, bottom: 0.40 }
-    - { start: 64, end: 67, bottom: 0.43 }
-    - { start: 68, end: 100, bottom: 0.35 }
+    - { start: 1, end: 11, bottom: 0.50, top: 0.10, left: 0.25, right: 0.25 }
+    - { start: 11, end: 42, bottom: 0.40, top: 0.10, left: 0.25, right: 0.25 }
+    - { start: 43, end: 51, bottom: 0.37, top: 0.10, left: 0.25, right: 0.25 }
+    - { start: 52, end: 63, bottom: 0.40, top: 0.10, left: 0.25, right: 0.25 }
+    - { start: 64, end: 67, bottom: 0.43, top: 0.10, left: 0.25, right: 0.25 }
+    - { start: 68, end: 100, bottom: 0.35, top: 0.10, left: 0.25, right: 0.25 }
 # --- MLFLOW CONFIGURATION ---
 mlflow:
   tracking_uri: "file:./mlruns"  # Local tracking (or set to remote server URI)

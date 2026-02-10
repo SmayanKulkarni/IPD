@@ -1,7 +1,8 @@
 stages:
   # --- EXPERT DATA TEMPLATES ---
   generate_templates:
-    cmd: python src/generate_templates.py
+    cmd: /home/smayan/Desktop/AI-ML-DS/AI-and-ML-Course/.conda/bin/python 
+      src/generate_templates.py
     deps:
     - src/generate_templates.py
     - src/ksi_v2.py
@@ -16,7 +17,8 @@ stages:
   # --- PRODUCTION PIPELINE (TCN HYBRID TUNED) ---
   # Note: Run `dvc repro preprocess_production -f` to regenerate data with raw landmarks for KSI
   preprocess_production:
-    cmd: python src/preprocess_hybrid.py
+    cmd: /home/smayan/Desktop/AI-ML-DS/AI-and-ML-Course/.conda/bin/python 
+      src/preprocess_hybrid.py
     deps:
     - src/preprocess_hybrid.py
     - src/features.py
@@ -32,7 +34,8 @@ stages:
         persist: true
 
   evaluate_production:
-    cmd: python src/evaluate.py --type hybrid --model models/tcn_hybrid_tuned.h5
+    cmd: /home/smayan/Desktop/AI-ML-DS/AI-and-ML-Course/.conda/bin/python 
+      src/evaluate.py --type hybrid --model models/tcn_hybrid_tuned.h5
     deps:
     - src/evaluate.py
     - models/tcn_hybrid_tuned.h5

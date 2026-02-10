@@ -56,6 +56,7 @@ import mlflow
 import mlflow.tensorflow
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
+from sklearn.utils.class_weight import compute_class_weight
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 from dvclive.keras import DVCLiveCallback
@@ -156,7 +157,16 @@ def main():
         print(f"   Test samples: {len(idx_test)}")
         print(f"   Classes: {classes}")
         print(f"   Pose features: {X_pose.shape[1:]}")
-        print(f"   CNN features: {X_cnn.shape[1:]}\n")
+        print(f"   CNN features: {X_cnn.shape[1:]}")
+        
+        # Compute class weights for imbalanced data
+        class_weights = compute_class_weight(
+            'balanced',
+            classes=np.unique(y[idx_train]),
+            y=y[idx_train]
+        )
+        class_weight_dict = dict(enumerate(class_weights))
+        print(f"   Class weights: {dict(zip(classes, class_weights.round(2)))}\n")
         
         history = model.fit(
             [X_cnn[idx_train], X_pose[idx_train]], y_cat[idx_train],
@@ -164,6 +174,7 @@ def main():
             epochs=cfg['epochs'], 
             batch_size=cfg['batch_size'],
             callbacks=callbacks,
+            class_weight=class_weight_dict,
             verbose=1
         )
         

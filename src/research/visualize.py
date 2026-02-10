@@ -1,4 +1,21 @@
 # Updated visualize.py
+# --- DETERMINISM FIXES (MUST BE BEFORE IMPORTS) ---
+import os
+import sys
+
+# Check for GPU flag early
+_use_gpu = '--gpu' in sys.argv
+
+if not _use_gpu:
+    # Force CPU mode for deterministic predictions
+    os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+    os.environ['MEDIAPIPE_DISABLE_GPU'] = '1'
+    print("🔒 Running in CPU mode for deterministic predictions (use --gpu to enable GPU)")
+
+os.environ['TF_DETERMINISTIC_OPS'] = '1'
+os.environ['TF_CUDNN_DETERMINISTIC'] = '1'
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+
 import argparse
 import cv2
 import yaml
@@ -351,6 +368,7 @@ if __name__ == "__main__":
     parser.add_argument("--speed", type=float, default=1.0, help="Playback speed (e.g., 0.5 for half speed)")
     parser.add_argument("--user_npz", help="User poses .npz for KSI analysis")
     parser.add_argument("--expert_npz", help="Expert poses .npz for KSI analysis")
+    parser.add_argument("--gpu", action='store_true', help="Enable GPU acceleration (less deterministic)")
     args = parser.parse_args()
 
     params = load_config()
