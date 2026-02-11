@@ -1,658 +1,690 @@
-%%=========================================================================================%%
-%% Smashifix: Final Revision - Architecture Updated, Springer Formatted
-%%=========================================================================================%%
+    %%=========================================================================================%%
+    %% Smashifix: Final Revision - Architecture Updated, Springer Formatted
+    %%=========================================================================================%%
 
-\documentclass[pdflatex,sn-mathphys-num]{sn-jnl}% Math and Physical Sciences Numbered Reference Style
+    \documentclass[pdflatex,sn-mathphys-num]{sn-jnl}% Math and Physical Sciences Numbered Reference Style
 
-%%%% Standard Packages
-\usepackage{graphicx}%
-\usepackage{multirow}%
-\usepackage{amsmath,amssymb,amsfonts}%
-\usepackage{amsthm}%
-\usepackage{mathrsfs}%
-\usepackage[title]{appendix}%
-\usepackage{xcolor}%
-\usepackage{textcomp}%
-\usepackage{manyfoot}%
-\usepackage{booktabs}%
-\usepackage{algorithm}%
-\usepackage{algorithmicx}%
-\usepackage{algpseudocode}%
-\usepackage{listings}%
-\usepackage{url}
+    %%%% Standard Packages
+    \usepackage{graphicx}%
+    \usepackage{multirow}%
+    \usepackage{amsmath,amssymb,amsfonts}%
+    \usepackage{amsthm}%
+    \usepackage{mathrsfs}%
+    \usepackage[title]{appendix}%
+    \usepackage{xcolor}%
+    \usepackage{textcomp}%
+    \usepackage{manyfoot}%
+    \usepackage{booktabs}%
+    \usepackage{algorithm}%
+    \usepackage{algorithmicx}%
+    \usepackage{algpseudocode}%
+    \usepackage{listings}%
+    \usepackage{url}
 
-%% Theorem Styles
-\theoremstyle{thmstyleone}%
-\newtheorem{theorem}{Theorem}% 
-\newtheorem{proposition}[theorem]{Proposition}% 
+    %% Theorem Styles
+    \theoremstyle{thmstyleone}%
+    \newtheorem{theorem}{Theorem}% 
+    \newtheorem{proposition}[theorem]{Proposition}% 
 
-\theoremstyle{thmstyletwo}%
-\newtheorem{example}{Example}%
-\newtheorem{remark}{Remark}%
+    \theoremstyle{thmstyletwo}%
+    \newtheorem{example}{Example}%
+    \newtheorem{remark}{Remark}%
 
-\theoremstyle{thmstylethree}%
-\newtheorem{definition}{Definition}%
+    \theoremstyle{thmstylethree}%
+    \newtheorem{definition}{Definition}%
 
-\raggedbottom
+    \raggedbottom
 
-\begin{document}
+    \begin{document}
 
-\title[Smashifix: Badminton Posture Correction]{Smashifix: An Application for Badminton Posture Correction Using Deep Learning}
+    \title[Smashifix: Badminton Posture Correction]{Smashifix: An Application for Badminton Posture Correction Using Deep Learning}
 
-%%=============================================================%%
-%% AUTHORS & AFFILIATIONS
-%%=============================================================%%
+    %%=============================================================%%
+    %% AUTHORS & AFFILIATIONS
+    %%=============================================================%%
 
-\author[1]{\fnm{Sian} \sur{Rodrigues}}\email{Sianrods250@gmail.com}
+    \author[1]{\fnm{Sian} \sur{Rodrigues}}\email{Sianrods250@gmail.com}
 
-\author[1]{\fnm{Vedant} \sur{Gadge}}\email{vedant.gadgegsis@gmail.com}
+    \author[1]{\fnm{Vedant} \sur{Gadge}}\email{vedant.gadgegsis@gmail.com}
 
-\author[1]{\fnm{Yati} \sur{Rathod}}\email{yatirathod01@gmail.com}
+    \author[1]{\fnm{Yati} \sur{Rathod}}\email{yatirathod01@gmail.com}
 
-\author[1]{\fnm{Smayan} \sur{Kulkarni}}\email{smayankulkarni05@gmail.com}
+    \author[1]{\fnm{Smayan} \sur{Kulkarni}}\email{smayankulkarni05@gmail.com}
 
-\author[1]{\fnm{Pradnya} \sur{Saval}}
+    \author[1]{\fnm{Pradnya} \sur{Saval}}
 
-\author[1]{\fnm{Namita} \sur{Pulgam}}
+    \author[1]{\fnm{Namita} \sur{Pulgam}}
 
-%% Affiliation
-\affil[1]{\orgdiv{Dept. of Computer Science and Engineering (Data Science)}, \orgname{Dwarkadas J. Sanghvi College of Engg.}, \city{Mumbai}, \country{India}}
+    %% Affiliation
+    \affil[1]{\orgdiv{Dept. of Computer Science and Engineering (Data Science)}, \orgname{Dwarkadas J. Sanghvi College of Engg.}, \city{Mumbai}, \country{India}}
 
 
-%%==================================%%
-%% ABSTRACT
-%%==================================%%
+    %%==================================%%
+    %% ABSTRACT
+    %%==================================%%
 
-\abstract{Badminton is a high-speed racquet sport demanding precise biomechanics and rapid reflexes, where even minor deviations in stroke technique can lead to stagnated performance and chronic injury. Traditional coaching, reliant on subjective observation, is inconsistent, expensive, and inaccessible to amateur players; existing automated solutions either classify actions without corrective feedback or require expensive multi-sensor hardware.
-This paper presents ``Smashifix,'' an automated computer vision framework that addresses these gaps through a dual-pipeline architecture: a Pose-LSTM pipeline for real-time feedback ($\sim$50ms latency) and an Attention-enhanced Temporal Convolutional Network (Attention-TCN) fusing skeletal data with visual context from a custom Residual-Shuffle Network (RSN) for forensic analysis ($\sim$85\% accuracy). A Kinematic Similarity Index (KSI) quantifies user performance against expert templates using Dynamic Time Warping (DTW). The framework classifies six distinct strokes and provides actionable biomechanical feedback using only a standard smartphone camera, enabling accessible, objective coaching for players at all levels.}
+    \abstract{Badminton is a high-speed racquet sport demanding precise biomechanics and rapid reflexes, where even minor deviations in stroke technique can lead to stagnated performance and chronic injury. Traditional coaching, reliant on subjective observation, is inconsistent, expensive, and inaccessible to amateur players; existing automated solutions either classify actions without corrective feedback or require expensive multi-sensor hardware.
+    This paper presents ``Smashifix,'' an automated computer vision framework that addresses these gaps through a dual-pipeline architecture: a Pose-LSTM pipeline for real-time feedback ($\sim$50ms latency) and an Attention-enhanced Temporal Convolutional Network (Attention-TCN) fusing skeletal data with visual context from a custom Residual-Shuffle Network (RSN) for forensic analysis ($\sim$85\% accuracy). A Kinematic Similarity Index (KSI) quantifies user performance against expert templates using Dynamic Time Warping (DTW). The framework classifies six distinct strokes and provides actionable biomechanical feedback using only a standard smartphone camera, enabling accessible, objective coaching for players at all levels.}
 
-\keywords{Markerless Pose Estimation, Attention-enhanced TCN, Residual-Shuffle Network, Kinematic Similarity Index, Biomechanical Feedback, Dynamic Time Warping}
+    \keywords{Markerless Pose Estimation, Attention-enhanced TCN, Residual-Shuffle Network, Kinematic Similarity Index, Biomechanical Feedback, Dynamic Time Warping}
 
-\maketitle
+    \maketitle
 
-%%==================================%%
-%% INTRODUCTION
-%%==================================%%
+    %%==================================%%
+    %% INTRODUCTION
+    %%==================================%%
 
-\section{Introduction}\label{sec1}
+    \section{Introduction}\label{sec1}
 
 
-\subsection{Background}
-The intersection of computer vision and artificial intelligence has fundamentally transformed the landscape of sports analytics, shifting the paradigm from subjective observation to data-driven decision-making. Modern systems possess the capability to track intricate movement patterns, providing athletes and coaches with objective, quantitative data that was previously inaccessible. In high-performance sports, even minor deviations in technique can significantly impact competitive outcomes. Badminton, in particular, is a sport defined by rapid reflexes, explosive power, and precise body mechanics. It requires a complex interplay of footwork, stroke execution, and tactical positioning, where the shuttlecock can travel at speeds exceeding 400 km/h. Consequently, the ability to analyze movement in granular detail---down to the angle of the wrist or the rotation of the hip---is essential for player development and injury prevention.
+    \subsection{Background}
+    The intersection of computer vision and artificial intelligence has fundamentally transformed the landscape of sports analytics, shifting the paradigm from subjective observation to data-driven decision-making. Modern systems possess the capability to track intricate movement patterns, providing athletes and coaches with objective, quantitative data that was previously inaccessible. In high-performance sports, even minor deviations in technique can significantly impact competitive outcomes. Badminton, in particular, is a sport defined by rapid reflexes, explosive power, and precise body mechanics. It requires a complex interplay of footwork, stroke execution, and tactical positioning, where the shuttlecock can travel at speeds exceeding 400 km/h. Consequently, the ability to analyze movement in granular detail---down to the angle of the wrist or the rotation of the hip---is essential for player development and injury prevention.
 
-Historically, biomechanical analysis was confined to laboratory settings equipped with marker-based motion capture systems. While highly accurate, these systems are intrusive, expensive, and restricted to controlled environments, making them unsuitable for on-court coaching. The advent of markerless pose estimation algorithms has opened new avenues for ``in-the-wild'' analysis, allowing for the extraction of kinematic data from standard video feeds. This democratization of technology presents a unique opportunity to bring professional-grade analytics to amateur and semi-professional players.
+    Historically, biomechanical analysis was confined to laboratory settings equipped with marker-based motion capture systems. While highly accurate, these systems are intrusive, expensive, and restricted to controlled environments, making them unsuitable for on-court coaching. The advent of markerless pose estimation algorithms has opened new avenues for ``in-the-wild'' analysis, allowing for the extraction of kinematic data from standard video feeds. This democratization of technology presents a unique opportunity to bring professional-grade analytics to amateur and semi-professional players.
 
-\subsection{Current Limitations and System Objectives}
-Despite advancements in sports technology, badminton coaching largely remains a manual and subjective process. Players often face challenges with improper posture and technique, which not only hampers skill development but also significantly increases the risk of chronic injuries such as lateral epicondylitis (tennis elbow) and patellar tendinopathy. Current automated solutions often suffer from critical limitations that hinder their widespread adoption:
-\begin{itemize}
-    \item \textbf{Hardware Dependency:} Many high-fidelity systems rely on expensive wearable sensors (IMUs) or multi-camera setups. These are impractical for widespread use due to their cost and setup complexity.
-    \item \textbf{Lack of Corrective Feedback:} Most existing computer vision applications focus solely on action recognition (e.g., classifying a smash vs. a drop) or basic statistical tracking. They fail to provide the ``how'' and ``why'' of a mistake, lacking the corrective feedback necessary for motor learning.
-    \item \textbf{Latency vs. Accuracy Trade-off:} Current approaches often fail to balance the need for real-time processing with the depth required for forensic biomechanical analysis. Real-time models are often too lightweight to capture subtle nuances, while high-accuracy models are too computationally intensive for live feedback.
-\end{itemize}
-
-To bridge these gaps, the system ``Smashifix'' is proposed as an accessible, single-camera coaching assistant. The primary objectives of this research are:
-\begin{enumerate}
-    \item To develop a hardware-agnostic framework that provides immediate, actionable feedback on player posture using only a standard smartphone camera.
-    \item To integrate lightweight deep learning models (Pose-LSTM) for real-time cues with robust hybrid models (Attention-TCN with RSN) for detailed forensic analysis.
-    \item To mathematically quantify deviations from expert templates using an enhanced Kinematic Similarity Index (KSI), thereby reducing the risk of injury through automated, objective correction.
-\end{enumerate}
-
-The organization of this paper is as follows: Section \ref{sec2} presents the Literature Survey, reviewing state-of-the-art methods in pose estimation and sports analytics, followed by a comparative analysis. Section \ref{sec3} outlines the proposed system, detailing the novel dual-pipeline architecture. Section \ref{sec4} provides an in-depth explanation of the methodology, including data preprocessing, mathematical formulations for the KSI, and feature engineering. Section \ref{sec5} presents the experimental setup, dataset description, evaluation metrics, and a comprehensive discussion of the results. Finally, Section \ref{sec6} concludes the study and outlines directions for future research.
-
-%%==================================%%
-%% LITERATURE SURVEY
-%%==================================%%
-
-\section{Literature Survey}\label{sec2}
-
-\subsection{Survey of Existing Systems and Datasets}
-The development of automated sports analysis relies heavily on the availability of high-quality, domain-specific data and robust architectures. 
-
-Wang et al. \cite{b1} detailed a structured approach to creating a tennis player dataset, capturing 2,000 annotated frames of key actions like forehands and serves using COCO-Annotator. This study emphasized the critical importance of diverse pose representation for training robust models capable of generalizing across different athletes. In the specific domain of badminton, Zhang et al. \cite{b2} developed a human-computer interactive teaching system using Part Affinity Fields (PAF) trained on a massive dataset of 35,000 movements. While their system was effective for basic movement tracking and hit-point detection, it primarily functioned as a retrieval system rather than a granular biomechanical correction tool.
-
-A comprehensive overview of these Human Pose Estimation (HPE) techniques is provided by Dibenedetto et al. \cite{b3}. Their survey categorizes methods into skeleton-based, surface-based, and volume-based models, highlighting the evolution from regression-based methods to modern detection frameworks like MediaPipe and OpenPose. They note that while 2D estimation has matured, persistent challenges remain in handling self-occlusion and crowded scenes, which are common in doubles badminton matches.
-
-\subsection{Pose Estimation Architectures}
-Accurate localization of joints is the cornerstone of biomechanical analysis. Cao et al. \cite{b4} established the viability of real-time 2D pose estimation with OpenPose, using Part Affinity Fields to associate keypoints in multi-person scenarios. This bottom-up approach was revolutionary but computationally expensive. Building on this, Lugaresi et al. \cite{b5} introduced MediaPipe, a modular framework optimized for on-device machine learning. Within this ecosystem, Bazarevsky et al. \cite{b6} proposed BlazePose, a lightweight detector-tracker architecture that predicts 33 body landmarks, making it ideal for real-time mobile applications where latency is a critical constraint.
-
-Historically, Toshev and Szegedy \cite{b7} pioneered the use of Deep Neural Networks (DNNs) for pose estimation with DeepPose, shifting the paradigm from manual feature engineering to direct regression of joint coordinates. For more advanced anatomical precision, G\"uler et al. \cite{b8} introduced DensePose, which maps 2D images to a 3D surface model. This allows for the analysis of complex muscle activation patterns and torso rotations that simpler landmark-based models often miss, providing a deeper layer of physiological feedback.
-
-\subsection{Action Recognition in Sports}
-Recognizing dynamic sports actions requires modeling both spatial and temporal dependencies. In badminton, Tukino et al. \cite{b9} utilized Convolutional Neural Networks (CNNs) combined with BlazePose to classify strokes such as smashes and serves, achieving 80--90\% accuracy. However, their system was limited to classification and lacked a feedback loop. Asriani et al. \cite{b10} achieved state-of-the-art results (98.68\%) by proposing a hybrid model that fuses Vision Transformers (ViT) for global context with skeletal features extracted via MediaPipe, proving that multimodal data yields superior performance in distinguishing visually similar strokes.
-
-In other sports, Siddiqui et al. \cite{b11} applied Random Forests and Long Short-Term Memory (LSTM) networks to classify cricket batting strokes, achieving 99.77\% accuracy with kinematic features. To handle temporal dynamics, Donahue et al. \cite{b12} introduced Long-term Recurrent Convolutional Networks (LRCN), which combine CNNs for visual features and LSTMs for sequence modeling---a distinct influence on the proposed architecture of Smashifix. Other significant architectures include Two-Stream Networks by Simonyan and Zisserman \cite{b13} and Inflated 3D ConvNets (I3D) by Carreira and Zisserman \cite{b14}, which extend convolutions into the temporal dimension to capture motion cues directly.
-
-\subsection{Lightweight Architectures and Attention Mechanisms}
-The computational demands of deep learning models present a barrier to real-time, on-device deployment---a key requirement for practical sports coaching tools. To address this, lightweight architectures have gained significant attention.
-
-Ma et al. \cite{b15} proposed ShuffleNet V2, a set of practical design guidelines for efficient network architecture that introduced the channel shuffle operation. This principle---enabling cross-group information flow in grouped convolutions---forms the architectural basis for the Residual-Shuffle Network (RSN) backbone used in the Smashifix system. In the context of sports analytics, Samma and Bin Sama \cite{b16} demonstrated in \textit{Multimedia Tools and Applications} that an Enhanced ShuffleNet backbone could be effectively used for human action recognition, validating the suitability of shuffle-based architectures for motion classification tasks.
-
-Simultaneously, the integration of attention mechanisms into temporal models has proven highly effective for action recognition. Pham et al. \cite{b17} proposed a lightweight Shuffle Graph Convolutional Network (Shuffle-GCN) in \textit{Multimedia Tools and Applications} that employs channel split and channel shuffle operations on skeleton data. Their work demonstrated that these efficient operations can maintain high precision for action recognition while significantly reducing computational costs. Yuan et al. \cite{b18} further explored this in \textit{Multimedia Tools and Applications} by proposing a lightweight graph convolutional network with multi-attention mechanisms for action recognition, achieving high accuracy on large-scale benchmarks while reducing parameters by over 60\% compared to baseline spatio-temporal GCNs.
-
-The attention mechanism, particularly Multi-Head Self-Attention \cite{b19}, allows models to dynamically weigh the importance of different time steps or spatial features in a sequence. This is especially valuable in sports motion analysis, where the critical moment of a stroke (e.g., the contact phase of a smash) occupies only a small fraction of the total action duration but is disproportionately important for analysis. The Smashifix Attention-TCN architecture incorporates this principle.
-
-\subsection{Feedback and Biomechanical Systems}
-While classification is well-studied, automated corrective feedback for high-velocity sports remains an open challenge. Bhosale et al. \cite{b20} developed a yoga correction system using PoseNet and KNN, successfully classifying static asanas. However, its reliance on static pose analysis makes it unsuitable for badminton, which requires analyzing momentum and rapid directional changes. Similarly, Harini et al. \cite{b21} used rule-based geometric heuristics for squat correction. While effective for simple exercises, these brittle rules fail to generalize to the complex, fluid kinetic chains involved in badminton strokes.
-
-For more advanced analysis, Q. Wang \cite{b22} utilized a Stacked Hourglass network to refine posture detection, improving landmark accuracy through repeated bottom-up, top-down processing. Crucially, Stenum and Ish\o i \cite{b23} validated the use of 2D monocular video for approximating 3D kinematic parameters, providing the theoretical basis for camera-based biomechanical analysis without expensive motion capture. Furthermore, Nakashima and Murai \cite{b24} applied deep learning to quantify baseball pitching mechanics, addressing the ``kinetic chain'' transfer of energy relevant to overhead strokes. Liu et al. \cite{b25} proposed deep metric learning for motion comparison, a methodology mirrored in this study to mathematically quantify the deviation between a player's technique and an expert's execution.
-
-In the domain of multimedia-based sports quality assessment, Chen et al. \cite{b26} applied DTW-based approaches to skeleton data for action quality assessment in sports education contexts published in \textit{Multimedia Tools and Applications}, demonstrating the effectiveness of temporal alignment for evaluating athletic performance against expert references---a concept central to the Smashifix KSI algorithm.
-
-\subsection{Comparative Analysis with Existing Solutions}
-To contextualize the proposed Smashifix system, a comparison was conducted against two representative studies: Tukino et al. \cite{b9} (Badminton Classification) and Bhosale et al. \cite{b20} (Yoga Correction). As shown in Table \ref{tab_lit_compare}, existing systems generally excel at either classification or static feedback, but rarely both in a dynamic context. The proposed system fills this void by offering a dual-mode solution.
-
-\begin{table}[h!]
-\caption{Comparison of Proposed System with Existing Literature}\label{tab_lit_compare}
-\centering
-\setlength{\tabcolsep}{5pt}
-\renewcommand{\arraystretch}{1.2}
-\begin{tabular}{|l|l|l|l|}
-\hline
-\textbf{Feature} & \textbf{Tukino et al. \cite{b9}} & \textbf{Bhosale et al. \cite{b20}} & \textbf{Proposed (Smashifix)} \\
-\hline
-\textbf{Domain} & Badminton & Yoga & Badminton \\
-\hline
-\textbf{Core Technology} & CNN + BlazePose & PoseNet + KNN & Attention-TCN + RSN \\
-\hline
-\textbf{Input Data} & Dynamic Video & Static Images & Dynamic Video \\
-\hline
-\textbf{Primary Objective} & Classification & Posture Correction & Classification + Correction \\
-\hline
-\textbf{Feedback Mechanism} & None (Label only) & Visual Overlay & Biomechanical (KSI) \\
-\hline
-\textbf{Latency} & Moderate & High & Low ($\sim$50ms) \\
-\hline
-\textbf{Analysis Depth} & Basic & Static Geometry & Forensic Biomechanics \\
-\hline
-\end{tabular}
-\end{table}
-\clearpage
-
-%%==================================%%
-%% PROPOSED SYSTEM
-%%==================================%%
-
-\section{Proposed System}\label{sec3}
-
-\subsection{System Proposal}
-The Smashifix system is proposed as a comprehensive coaching assistant designed to bridge the gap between amateur players and professional analysis. The system is designed to intake monocular video footage from a standard smartphone camera. It automatically segments the video into distinct stroke instances, classifies the stroke type (e.g., Forehand Smash, Backhand Drive), and then performs a forensic biomechanical analysis. The core proposition is the generation of a ``Kinematic Similarity Index'' (KSI), which mathematically quantifies how closely a user's movement mirrors that of an elite professional, providing specific, drill-based recommendations for improvement.
-
-\subsection{System Architecture}
-The solution is architected to solve two distinct problems: real-time on-court feedback (where speed is critical) and detailed post-match analysis (where accuracy is paramount). 
-
-As illustrated in Fig. \ref{fig1}, the solution is built upon a novel dual-pipeline framework that processes video data to deliver granular feedback:
-
-\begin{enumerate}
-    \item \textbf{Pose Pipeline (Real-Time Mode):} Designed for immediate feedback, this pipeline utilizes a lightweight architecture that processes skeletal landmarks exclusively. It achieves ultra-low latency ($\sim$50ms), allowing players to receive corrective cues instantly during practice sessions. It relies on a Convolutional-LSTM network to capture local temporal dynamics.
-    
-    \item \textbf{Hybrid Pipeline (Forensic Mode):} Designed for in-depth analysis, this pipeline fuses skeletal data with visual context (e.g., racket orientation, grip nuances) extracted via a custom Residual-Shuffle Network (RSN). The temporal modeling is handled by an Attention-enhanced Temporal Convolutional Network (Attention-TCN) featuring dilated causal convolutions with Multi-Head Self-Attention. While computationally heavier, it provides the high-fidelity biomechanical data necessary for detailed performance reviews.
-    
-    \item \textbf{Intelligent Feedback Engine (KSI):} The solution moves beyond simple error detection by introducing an enhanced Kinematic Similarity Index (KSI). This engine treats sports motion as a temporal sequence, comparing user movements against a library of expert biomechanical templates using 32 hierarchical features. It accounts for variations in speed and body type through DTW alignment with Sakoe-Chiba band constraints, ensuring that the feedback is personalized and biomechanically valid.
-\end{enumerate}
-
-\begin{figure}[h!]
-\centering
-\includegraphics[width=0.9\textwidth]{System_architecture.jpeg}
-\caption{Proposed System Architecture}\label{fig1}
-\end{figure}
-\clearpage
-%%==================================%%
-%% METHODOLOGY
-%%==================================%%
-
-\section{Methodology}\label{sec4}
-
-This section details the technical implementation, mathematical formulations, and algorithmic logic that power the Smashifix solution.
-
-\subsection{Data Preprocessing}
-
-\subsubsection{Video Segmentation}
-To reduce noise from pre-shot and post-shot idling, the system processes fixed-duration segments rather than entire clips. Let a video have FPS $f$ and total frames $N$. Given a target segment length $s$ (typically 1.75s--2.0s), the segment length in frames is $M = \lfloor s \cdot f \rfloor$.
-
-For standard strokes (e.g., Smashes, Drives), \textit{Tail-Window Extraction} is employed to capture the follow-through:
-\begin{equation}
-t_{0} = \max(0, N-M), \quad t \in [t_{0}, t_{0}+M)
-\end{equation}
-\noindent where:
-\begin{itemize}
-    \item $t_0$: The start frame index of the segment.
-    \item $N$: The total number of frames in the raw video clip.
-    \item $M$: The calculated window size (in frames) representing the action duration.
-\end{itemize}
-
-For specific defensive shots like Lifts, \textit{Middle-Window Extraction} is utilized to center the contact point:
-\begin{equation}
-t_{0} = \max(0, \lfloor \frac{N}{2} \rfloor - \lfloor \frac{M}{2} \rfloor)
-\end{equation}
-
-\subsubsection{Spatial Cropping and Robust Tracking}
-To stabilize pose detection, a deterministic crop is applied. For the Hybrid pipeline, a dynamic Region of Interest (ROI) is computed based on visible joints $J_{v}$ where visibility $v_{j} \ge v_{min}$. The bounding box is determined by the extrema of visible landmarks:
-\begin{equation}
-x_{1} = \min_{j \in J_{v}} x_{j}, \quad x_{2} = \max_{j \in J_{v}} x_{j}
-\end{equation}
-\noindent where:
-\begin{itemize}
-    \item $x_1, x_2$: The minimum and maximum x-coordinates defining the bounding box width.
-    \item $J_v$: The set of skeletal joints detected with confidence above threshold $v_{min}$.
-\end{itemize}
-
-\begin{figure}[h]
-\centering
-\includegraphics[width=0.45\textwidth]{roi_extraction.png}
-\caption{Visualization of Region of Interest (ROI) Extraction}\label{fig_roi}
-\end{figure}
-
-To prevent jitter, Temporal Smoothing is applied to the box coordinates $B_t$ using an Exponential Moving Average (EMA):
-\begin{equation}
-B_{t} \leftarrow (1-\lambda)B_{t} + \lambda B_{t-1}
-\end{equation}
-\noindent where:
-\begin{itemize}
-    \item $B_t$: The bounding box coordinates at the current frame $t$.
-    \item $B_{t-1}$: The bounding box coordinates from the previous frame.
-    \item $\lambda$: The smoothing factor (set to 0.7), which controls the trade-off between responsiveness and stability.
-\end{itemize}
-
-\begin{figure}[h]
-\centering
-\includegraphics[width=0.45\textwidth]{mediapipe_keypoints.png}
-\caption{Skeletal Keypoints Extraction using MediaPipe}\label{fig_keypoints}
-\end{figure}
-
-\subsubsection{Geometric Pose Normalization (99D)}
-To ensure the model learns posture rather than camera position, a three-step normalization is applied to the raw 33 landmarks $P \in \mathbb{R}^{33\times3}$:
-\begin{enumerate}
-    \item \textbf{Centering:} The skeleton is translated so the hip center $c$ becomes the origin:
-    \begin{equation}
-    c = \frac{P_{LH} + P_{RH}}{2}, \quad \tilde{P} = P - c
-    \end{equation}
-    \noindent where $c$ is the calculated midpoint between the Left Hip ($P_{LH}$) and Right Hip ($P_{RH}$), and $\tilde{P}$ represents the translated coordinates.
-    
-    \item \textbf{Alignment:} A spine vector $s$ is defined from the hip center to the shoulder midpoint. An orthonormal basis $R = [\hat{x}; \hat{y}; \hat{z}]$ is constructed such that the spine aligns with the vertical Y-axis. The pose is rotated via $P' = \tilde{P}R^T$.
-    
-    \item \textbf{Scaling:} The pose is normalized by the spine length $l = \|s\|$ to achieve scale invariance:
-    \begin{equation}
-    \overline{P} = \frac{P'}{l}
-    \end{equation}
-    \noindent where $\overline{P}$ is the final normalized pose vector and $l$ is the Euclidean length of the user's spine in the frame.
-\end{enumerate}
-
-\subsection{Hybrid Feature Engineering}
-
-\subsubsection{Residual-Shuffle Network (RSN) Backbone}
-For the Hybrid pipeline, a compact visual embedding is extracted to capture context (e.g., racket position, grip nuances). Unlike conventional approaches that use pre-trained ImageNet models such as MobileNetV2, the Smashifix system employs a custom Residual-Shuffle Network (RSN) inspired by the ShuffleNet V2 \cite{b15} design principles. The RSN is a lightweight, efficient backbone that combines residual connections with channel shuffling for effective cross-group information mixing.
-
-The RSN architecture consists of:
-\begin{itemize}
-    \item \textbf{Stem:} A $3 \times 3$ convolution with stride 2 followed by batch normalization, ReLU activation, and max pooling for initial feature extraction and spatial downsampling.
-    \item \textbf{Shuffle Units (4 Stages):} Each stage comprises multiple Shuffle Units. For stride-1 units, the input channels are split in half: one half passes through an identity shortcut while the other is processed by a bottleneck consisting of $1 \times 1$ Conv $\rightarrow$ Depthwise $3 \times 3$ Conv $\rightarrow$ $1 \times 1$ Conv, each followed by batch normalization and ReLU. For stride-2 units, both branches downsample, effectively doubling the channel count. After concatenation, a channel shuffle operation redistributes information across groups.
-    \item \textbf{Global Average Pooling + Projection:} The backbone output is reduced to a global feature vector, projected to $d$ dimensions via a dense layer with ReLU activation, and L2-normalized.
-\end{itemize}
-
-The channel shuffle operation can be described as a reshape-transpose-flatten sequence on the channel dimension:
-\begin{equation}
-\text{Shuffle}(x, g) = \text{Flatten}\left(\text{Transpose}\left(\text{Reshape}(x, [B, H, W, g, C/g]), [0,1,2,4,3]\right)\right)
-\end{equation}
-\noindent where $g$ is the number of groups (set to 4) and $C$ is the total channel count.
-
-The ROI-cropped frame $I_t$ is resized to $224 \times 224$ and passed through the pre-trained RSN:
-\begin{equation}
-h_{t} = \text{RSN}(I_{t}) \in \mathbb{R}^{d}
-\end{equation}
-\noindent where $h_t$ is the feature map extracted from input image $I_t$.
-
-This embedding is projected to 64 dimensions and L2-normalized:
-\begin{equation}
-u_{t} = \text{ReLU}(W h_{t} + b), \quad c_{t} = \frac{u_{t}}{\|u_{t}\|_2}
-\end{equation}
-\noindent where $W$ and $b$ are learnable weights and biases, and $c_t$ is the normalized context vector.
-
-\subsubsection{Feature Fusion}
-The final feature vector $x_t$ is the concatenation of the normalized pose and the visual embedding:
-\begin{equation}
-x_{t} = [\text{vec}(\overline{P}_{t}) \parallel c_{t}] \in \mathbb{R}^{163}
-\end{equation}
-
-\subsection{Model Implementation}
-The model architecture is illustrated in Fig. \ref{fig2}.
-
-\begin{figure}[h]
-\centering
-\includegraphics[width=0.9\textwidth]{Model_architecture.jpeg}
-\caption{Model Architecture}\label{fig2}
-\end{figure}
-
-\subsubsection{Classification Architectures}
-\begin{itemize}
-    \item \textbf{Pose Pipeline:} A Convolutional-LSTM network consisting of a Conv1D layer (128 filters, kernel size 4) to capture local temporal dynamics, followed by two stacked LSTM layers (128 and 64 units) with batch normalization and dropout regularization ($0.3$--$0.4$).
-    \item \textbf{Hybrid Pipeline (Attention-TCN):} A dual-branch architecture combining an Attention-enhanced Temporal Convolutional Network with a late fusion strategy:
+    \subsection{Current Limitations and System Objectives}
+    Despite advancements in sports technology, badminton coaching largely remains a manual and subjective process. Players often face challenges with improper posture and technique, which not only hampers skill development but also significantly increases the risk of chronic injuries such as lateral epicondylitis (tennis elbow) and patellar tendinopathy. Current automated solutions often suffer from critical limitations that hinder their widespread adoption:
     \begin{itemize}
-        \item \textit{CNN/Visual Branch:} The visual feature sequence undergoes an initial $1 \times 1$ projection to $F$ filters, followed by a deep TCN consisting of 4 dilated causal Conv1D layers with dilations $d \in \{1, 2, 4, 8\}$. Each TCN layer includes batch normalization, ReLU activation, spatial dropout, and a residual connection. The receptive field of this TCN spans 31 frames. The output is then processed by a Multi-Head Self-Attention layer ($h$ heads, key dimension $k$) with a residual connection and layer normalization, followed by a GRU layer ($G$ units).
-        \item \textit{Pose Branch:} The normalized pose sequence is processed by a Conv1D layer ($F$ filters, kernel size 3, causal padding), followed by an identical Multi-Head Self-Attention block and a GRU layer ($G$ units) with batch normalization.
-        \item \textit{Fusion:} The outputs of both branches are concatenated and passed through two dense layers ($F_{\text{fuse}}$ and $F_{\text{fuse}}/2$ units) with dropout, terminating in a softmax classifier.
+        \item \textbf{Hardware Dependency:} Many high-fidelity systems rely on expensive wearable sensors (IMUs) or multi-camera setups. These are impractical for widespread use due to their cost and setup complexity.
+        \item \textbf{Lack of Corrective Feedback:} Most existing computer vision applications focus solely on action recognition (e.g., classifying a smash vs. a drop) or basic statistical tracking. They fail to provide the ``how'' and ``why'' of a mistake, lacking the corrective feedback necessary for motor learning.
+        \item \textbf{Latency vs. Accuracy Trade-off:} Current approaches often fail to balance the need for real-time processing with the depth required for forensic biomechanical analysis. Real-time models are often too lightweight to capture subtle nuances, while high-accuracy models are too computationally intensive for live feedback.
     \end{itemize}
-\end{itemize}
 
-The dilated causal convolution for layer $l$ with dilation rate $d_l$ can be expressed as:
-\begin{equation}
-\text{DilConv}(x_t, d_l) = \sum_{k=0}^{K-1} w_k \cdot x_{t - d_l \cdot k}
-\end{equation}
-\noindent where $K$ is the kernel size (set to 3), $w_k$ are the learned filter weights, and the causal constraint ensures $t - d_l \cdot k \ge 0$.
+    To bridge these gaps, the system ``Smashifix'' is proposed as an accessible, single-camera coaching assistant. The primary objectives of this research are:
+    \begin{enumerate}
+        \item To develop a hardware-agnostic framework that provides immediate, actionable feedback on player posture using only a standard smartphone camera.
+        \item To integrate lightweight deep learning models (Pose-LSTM) for real-time cues with robust hybrid models (Attention-TCN with RSN) for detailed forensic analysis.
+        \item To mathematically quantify deviations from expert templates using an enhanced Kinematic Similarity Index (KSI), thereby reducing the risk of injury through automated, objective correction.
+    \end{enumerate}
 
-The Multi-Head Self-Attention mechanism computes:
-\begin{equation}
-\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right) V
-\end{equation}
-\noindent where $Q$, $K$, and $V$ are the query, key, and value projections of the input sequence, and $d_k$ is the key dimension. The multi-head variant concatenates $h$ independent attention heads and projects the result. A residual connection preserves gradient flow:
-\begin{equation}
-y = \text{LayerNorm}(x + \text{MultiHead}(x, x, x))
-\end{equation}
+    The organization of this paper is as follows: Section \ref{sec2} presents the Literature Survey, reviewing state-of-the-art methods in pose estimation and sports analytics, followed by a comparative analysis. Section \ref{sec3} outlines the proposed system, detailing the novel dual-pipeline architecture. Section \ref{sec4} provides an in-depth explanation of the methodology, including data preprocessing, mathematical formulations for the KSI, and feature engineering. Section \ref{sec5} presents the experimental setup, dataset description, evaluation metrics, and a comprehensive discussion of the results. Finally, Section \ref{sec6} concludes the study and outlines directions for future research.
 
-The hyperparameters of the Attention-TCN were optimized using Optuna \cite{b27} with a Bayesian search strategy. The tuned values are: $F = 80$ filters, $G = 80$ GRU units, $h = 8$ attention heads, $k = 32$ key dimension, $F_{\text{fuse}} = 80$ fusion units, L2 regularization $\lambda = 7.6 \times 10^{-5}$, dropout rate $p = 0.22$, learning rate $\eta = 5.6 \times 10^{-4}$, and label smoothing $\epsilon = 0.1$.
+    %%==================================%%
+    %% LITERATURE SURVEY
+    %%==================================%%
 
-\subsubsection{Contact-Aware Prediction Algorithm}
-To improve accuracy, the specific temporal window containing the stroke contact point is identified. A composite arm velocity $v_t$ is calculated based on the right shoulder, elbow, and wrist. The window with the maximum acceleration magnitude $A$ is selected for the final prediction:
-\begin{equation}
-A = \|\Delta v\|_2, \quad \text{Class} = \arg\max_{c} p(c | X_{peak\_acc})
-\end{equation}
-\noindent where $A$ is the magnitude of acceleration, and $\Delta v$ represents the change in velocity vectors between consecutive frames.
+    \section{Literature Survey}\label{sec2}
 
-\subsection{Biomechanical Analysis (KSI Algorithm)}
-The core of the feedback mechanism is the enhanced Kinematic Similarity Index (KSI), which compares the user's motion sequence $U$ against a DTW-aligned expert template $E$. KSI extends the original algorithm with 32 hierarchical biomechanical features, contact-centered windowing, confidence filtering, and jerk analysis.
+    \subsection{Survey of Existing Systems and Datasets}
+    The development of automated sports analysis relies heavily on the availability of high-quality, domain-specific data and robust architectures. 
 
-\subsubsection{Enhanced Feature Extraction (32D)}
-KSI extracts 32 hierarchical biomechanical features per frame, organized into six categories:
-\begin{itemize}
-    \item \textbf{Joint Angles (12):} Elbow flexion, shoulder elevation, shoulder abduction, knee flexion, hip flexion, and ankle dorsiflexion for both left and right sides.
-    \item \textbf{Limb Ratios (6):} Full arm extension, full leg extension, and forearm-to-upper-arm ratio, normalized by torso length for scale invariance.
-    \item \textbf{Spinal Alignment (4):} Forward lean (sagittal), lateral lean (frontal), spine twist (transverse), and normalized spine length.
-    \item \textbf{Rotational Dynamics (4):} Hip-shoulder separation angle (critical for power generation), hip rotation, shoulder rotation, and trunk rotation velocity.
-    \item \textbf{Wrist Dynamics (3):} Wrist height, horizontal reach, and radial deviation---all normalized relative to the torso.
-    \item \textbf{Center of Mass (3):} Approximate CoM displacement in $x$, $y$, and $z$ axes, computed as a weighted average of hip (50\%), shoulder (30\%), and knee (20\%) positions.
-\end{itemize}
+    Wang et al. \cite{b1} detailed a structured approach to creating a tennis player dataset, capturing 2,000 annotated frames of key actions like forehands and serves using COCO-Annotator. This study emphasized the critical importance of diverse pose representation for training robust models capable of generalizing across different athletes. In the specific domain of badminton, Zhang et al. \cite{b2} developed a human-computer interactive teaching system using Part Affinity Fields (PAF) trained on a massive dataset of 35,000 movements. While their system was effective for basic movement tracking and hit-point detection, it primarily functioned as a retrieval system rather than a granular biomechanical correction tool.
 
-\subsubsection{Confidence Filtering}
-Before analysis, unreliable frames are filtered based on two criteria:
-\begin{enumerate}
-    \item \textbf{Anatomical Plausibility:} Limb length ratios are checked against expected anthropometric ranges. Frames with anatomically implausible configurations are rejected.
-    \item \textbf{Temporal Consistency:} Frames exhibiting sudden landmark displacements exceeding 0.3 (in normalized coordinates) between consecutive frames are flagged as tracking artifacts and excluded.
-\end{enumerate}
+    A comprehensive overview of these Human Pose Estimation (HPE) techniques is provided by Dibenedetto et al. \cite{b3}. Their survey categorizes methods into skeleton-based, surface-based, and volume-based models, highlighting the evolution from regression-based methods to modern detection frameworks like MediaPipe and OpenPose. They note that while 2D estimation has matured, persistent challenges remain in handling self-occlusion and crowded scenes, which are common in doubles badminton matches.
 
-\subsubsection{Contact-Centered Windowing}
-To focus computational resources on the most biomechanically relevant portion of the sequence, a contact-centered window is applied. The contact frame $t_c$ is first identified from the shot phase segmentation, and a window of $\pm W$ frames is extracted:
-\begin{equation}
-\text{Window} = [t_c - W_{\text{pre}}, \; t_c + W_{\text{post}}]
-\end{equation}
-\noindent where $W_{\text{pre}}$ and $W_{\text{post}}$ are the pre-contact and post-contact window sizes (set to 18 frames each, covering approximately 600ms at 30 FPS).
+    \subsection{Pose Estimation Architectures}
+    Accurate localization of joints is the cornerstone of biomechanical analysis. Cao et al. \cite{b4} established the viability of real-time 2D pose estimation with OpenPose, using Part Affinity Fields to associate keypoints in multi-person scenarios. This bottom-up approach was revolutionary but computationally expensive. Building on this, Lugaresi et al. \cite{b5} introduced MediaPipe, a modular framework optimized for on-device machine learning. Within this ecosystem, Bazarevsky et al. \cite{b6} proposed BlazePose, a lightweight detector-tracker architecture that predicts 33 body landmarks, making it ideal for real-time mobile applications where latency is a critical constraint.
 
-\subsubsection{Dynamic Time Warping (DTW) with Sakoe-Chiba Band}
-To account for temporal variations (speed of execution), DTW is employed to align the sequences by minimizing the cumulative Euclidean distance. The recurrence relation for the cost matrix $D$ is:
-\begin{equation}
-D_{i,j} = \|F_{i}^{E} - F_{j}^{U}\|_2 + \min\{D_{i-1,j}, D_{i,j-1}, D_{i-1,j-1}\}
-\end{equation}
-\noindent where:
-\begin{itemize}
-    \item $D_{i,j}$: The cumulative cost to align Expert frame $i$ with User frame $j$.
-    \item $F_{i}^{E}, F_{j}^{U}$: The biomechanical feature vectors for the Expert and User respectively.
-    \item $\|\cdot\|_2$: The Euclidean distance metric.
-\end{itemize}
+    Historically, Toshev and Szegedy \cite{b7} pioneered the use of Deep Neural Networks (DNNs) for pose estimation with DeepPose, shifting the paradigm from manual feature engineering to direct regression of joint coordinates. For more advanced anatomical precision, G\"uler et al. \cite{b8} introduced DensePose, which maps 2D images to a 3D surface model. This allows for the analysis of complex muscle activation patterns and torso rotations that simpler landmark-based models often miss, providing a deeper layer of physiological feedback.
 
-To improve computational efficiency and prevent pathological alignments, a Sakoe-Chiba band constraint \cite{b29} is applied. This restricts the warping path to a band of width $r$ around the diagonal:
-\begin{equation}
-|i - j| \le r, \quad r = \lfloor \beta \cdot \max(N_E, N_U) \rfloor
-\end{equation}
-\noindent where $\beta$ is the band ratio (set to 0.2) and $N_E$, $N_U$ are the lengths of the expert and user sequences respectively.
+    \subsection{Action Recognition in Sports}
+    Recognizing dynamic sports actions requires modeling both spatial and temporal dependencies. In badminton, Tukino et al. \cite{b9} utilized Convolutional Neural Networks (CNNs) combined with BlazePose to classify strokes such as smashes and serves, achieving 80--90\% accuracy. However, their system was limited to classification and lacked a feedback loop. Asriani et al. \cite{b10} achieved state-of-the-art results (98.68\%) by proposing a hybrid model that fuses Vision Transformers (ViT) for global context with skeletal features extracted via MediaPipe, proving that multimodal data yields superior performance in distinguishing visually similar strokes.
 
-\subsubsection{Phase-Aware Attention}
-The system segments the aligned shot into five biomechanical phases: \textit{Preparation, Loading, Acceleration, Contact,} and \textit{Follow-through}. An attention weight $\alpha_k$ is assigned to each frame using a Gaussian envelope centered on the phase:
-\begin{equation}
-\alpha_{k} = w_{phase} \cdot \left(0.5 + 0.5\exp\left(-0.5\left(\frac{k-center}{width}\right)^{2}\right)\right)
-\end{equation}
-\noindent where:
-\begin{itemize}
-    \item $\alpha_k$: The importance weight assigned to frame $k$.
-    \item $w_{phase}$: The predefined weight of the current phase (e.g., Contact phase $w=3.0$, Acceleration phase $w=2.0$, Preparation phase $w=0.8$).
-    \item $center$: The frame index representing the midpoint of the phase.
-    \item $width$: A parameter controlling the spread of the Gaussian curve (phase duration).
-\end{itemize}
+    In other sports, Siddiqui et al. \cite{b11} applied Random Forests and Long Short-Term Memory (LSTM) networks to classify cricket batting strokes, achieving 99.77\% accuracy with kinematic features. To handle temporal dynamics, Donahue et al. \cite{b12} introduced Long-term Recurrent Convolutional Networks (LRCN), which combine CNNs for visual features and LSTMs for sequence modeling---a distinct influence on the proposed architecture of Smashifix. Other significant architectures include Two-Stream Networks by Simonyan and Zisserman \cite{b13} and Inflated 3D ConvNets (I3D) by Carreira and Zisserman \cite{b14}, which extend convolutions into the temporal dimension to capture motion cues directly.
 
-\subsubsection{Scoring Components}
-The final KSI score is an aggregate of four differential kinematic similarities:
+    \subsection{Lightweight Architectures and Attention Mechanisms}
+    The computational demands of deep learning models present a barrier to real-time, on-device deployment---a key requirement for practical sports coaching tools. To address this, lightweight architectures have gained significant attention.
 
-\textbf{Pose Similarity ($S_{pose}$):} Computed as the attention-weighted cosine similarity of the feature vectors:
-\begin{equation}
-S_{pose} = \frac{\sum_{k}\alpha_{k} \cdot \frac{F_k^E \cdot F_k^U}{\|F_k^E\| \cdot \|F_k^U\|}}{\sum_{k}\alpha_{k}}
-\end{equation}
+    Ma et al. \cite{b15} proposed ShuffleNet V2, a set of practical design guidelines for efficient network architecture that introduced the channel shuffle operation. This principle---enabling cross-group information flow in grouped convolutions---forms the architectural basis for the Residual-Shuffle Network (RSN) backbone used in the Smashifix system. In the context of sports analytics, Samma and Bin Sama \cite{b16} demonstrated in \textit{Multimedia Tools and Applications} that an Enhanced ShuffleNet backbone could be effectively used for human action recognition, validating the suitability of shuffle-based architectures for motion classification tasks.
 
-\textbf{Velocity Similarity ($S_{vel}$):} Incorporates both directional alignment and magnitude matching:
-\begin{equation}
-S_{vel} = \frac{\sum_{k}\alpha_{k} \cdot \text{cos}_{vel,k} \cdot \exp(-0.1\|V_k^E - V_k^U\|^2)}{\sum_{k}\alpha_{k}}
-\end{equation}
-\noindent where:
-\begin{itemize}
-    \item $\text{cos}_{vel,k}$: The cosine similarity between the direction of the User's velocity and Expert's velocity at frame $k$.
-    \item $V^E, V^U$: The magnitude of velocity vectors for Expert and User.
-\end{itemize}
+    Simultaneously, the integration of attention mechanisms into temporal models has proven highly effective for action recognition. Pham et al. \cite{b17} proposed a lightweight Shuffle Graph Convolutional Network (Shuffle-GCN) in \textit{Multimedia Tools and Applications} that employs channel split and channel shuffle operations on skeleton data. Their work demonstrated that these efficient operations can maintain high precision for action recognition while significantly reducing computational costs. Yuan et al. \cite{b18} further explored this in \textit{Multimedia Tools and Applications} by proposing a lightweight graph convolutional network with multi-attention mechanisms for action recognition, achieving high accuracy on large-scale benchmarks while reducing parameters by over 60\% compared to baseline spatio-temporal GCNs.
 
-\textbf{Acceleration Similarity ($S_{acc}$)} and \textbf{Jerk Similarity ($S_{jerk}$)} follow analogous formulations using the second and third temporal derivatives of the feature sequences, respectively.
+    The attention mechanism, particularly Multi-Head Self-Attention \cite{b19}, allows models to dynamically weigh the importance of different time steps or spatial features in a sequence. This is especially valuable in sports motion analysis, where the critical moment of a stroke (e.g., the contact phase of a smash) occupies only a small fraction of the total action duration but is disproportionately important for analysis. The Smashifix Attention-TCN architecture incorporates this principle.
 
-The final weighted KSI score is computed as:
-\begin{equation}
-\text{KSI}_{\text{total}} = w_p \cdot S_{pose} + w_v \cdot S_{vel} + w_a \cdot S_{acc}
-\end{equation}
-\noindent where $w_p = 0.4$, $w_v = 0.4$, and $w_a = 0.2$ are the component weights.
+    \subsection{Feedback and Biomechanical Systems}
+    While classification is well-studied, automated corrective feedback for high-velocity sports remains an open challenge. Bhosale et al. \cite{b20} developed a yoga correction system using PoseNet and KNN, successfully classifying static asanas. However, its reliance on static pose analysis makes it unsuitable for badminton, which requires analyzing momentum and rapid directional changes. Similarly, Harini et al. \cite{b21} used rule-based geometric heuristics for squat correction. While effective for simple exercises, these brittle rules fail to generalize to the complex, fluid kinetic chains involved in badminton strokes.
 
-%%==================================%%
-%% EXPERIMENTS & RESULTS
-%%==================================%%
+    For more advanced analysis, Q. Wang \cite{b22} utilized a Stacked Hourglass network to refine posture detection, improving landmark accuracy through repeated bottom-up, top-down processing. Crucially, Stenum and Ish\o i \cite{b23} validated the use of 2D monocular video for approximating 3D kinematic parameters, providing the theoretical basis for camera-based biomechanical analysis without expensive motion capture. Furthermore, Nakashima and Murai \cite{b24} applied deep learning to quantify baseball pitching mechanics, addressing the ``kinetic chain'' transfer of energy relevant to overhead strokes. Liu et al. \cite{b25} proposed deep metric learning for motion comparison, a methodology mirrored in this study to mathematically quantify the deviation between a player's technique and an expert's execution.
 
-\section{Experiments and Results}\label{sec5}
+    In the domain of multimedia-based sports quality assessment, Chen et al. \cite{b26} applied DTW-based approaches to skeleton data for action quality assessment in sports education contexts published in \textit{Multimedia Tools and Applications}, demonstrating the effectiveness of temporal alignment for evaluating athletic performance against expert references---a concept central to the Smashifix KSI algorithm.
 
-\subsection{Dataset Description}
-The system was trained on the ``Badminton Stroke Video Dataset'' sourced from Kaggle \cite{b28}, augmented with proprietary high-definition footage. The dataset comprises 1.32 GB of data capturing human subjects performing strokes from multiple angles under consistent lighting conditions. It is categorized into six distinct stroke classes (Forehand Clear, Drive, Lift, Net Shot; Backhand Drive, Net Shot). The data was partitioned using a stratified split: Training Set (70\%), Validation Set (15\%), and Test Set (15\%).
+    \subsection{Comparative Analysis with Existing Solutions}
+    To contextualize the proposed Smashifix system, a comparison was conducted against two representative studies: Tukino et al. \cite{b9} (Badminton Classification) and Bhosale et al. \cite{b20} (Yoga Correction). As shown in Table \ref{tab_lit_compare}, existing systems generally excel at either classification or static feedback, but rarely both in a dynamic context. The proposed system fills this void by offering a dual-mode solution.
 
-\subsection{Evaluation Metrics}
-To rigorously assess the performance of the classification pipelines, the following metrics were employed:
+    \begin{table}[h!]
+    \caption{Comparison of Proposed System with Existing Literature}\label{tab_lit_compare}
+    \centering
+    \small
+    \setlength{\tabcolsep}{4pt}
+    \renewcommand{\arraystretch}{1.2}
+    \begin{tabular}{|l|l|l|l|}
+    \hline
+    \textbf{Feature} & \textbf{Tukino et al. \cite{b9}} & \textbf{Bhosale et al. \cite{b20}} & \textbf{Proposed (Smashifix)} \\
+    \hline
+    \textbf{Domain} & Badminton & Yoga & Badminton \\
+    \hline
+    \textbf{Core Tech.} & CNN + BlazePose & PoseNet + KNN & Attention-TCN + RSN \\
+    \hline
+    \textbf{Input Data} & Dynamic Video & Static Images & Dynamic Video \\
+    \hline
+    \textbf{Objective} & Classification & Posture Correction & Classification + Correction \\
+    \hline
+    \textbf{Feedback} & None (Label only) & Visual Overlay & Biomechanical (KSI) \\
+    \hline
+    \textbf{Latency} & Moderate & High & Low ($\sim$50ms) \\
+    \hline
+    \textbf{Analysis} & Basic & Static Geometry & Forensic Biomechanics \\
+    \hline
+    \end{tabular}
+    \end{table}
+    \clearpage
 
-\begin{enumerate}
-    \item \textbf{Accuracy:} The ratio of correctly predicted observations to the total observations.
+    %%==================================%%
+    %% PROPOSED SYSTEM
+    %%==================================%%
+
+    \section{Proposed System}\label{sec3}
+
+    \subsection{System Proposal}
+    The Smashifix system is proposed as a comprehensive coaching assistant designed to bridge the gap between amateur players and professional analysis. The system is designed to intake monocular video footage from a standard smartphone camera. It automatically segments the video into distinct stroke instances, classifies the stroke type (e.g., Forehand Smash, Backhand Drive), and then performs a forensic biomechanical analysis. The core proposition is the generation of a ``Kinematic Similarity Index'' (KSI), which mathematically quantifies how closely a user's movement mirrors that of an elite professional, providing specific, drill-based recommendations for improvement.
+
+    \subsection{System Architecture}
+    The solution is architected to solve two distinct problems: real-time on-court feedback (where speed is critical) and detailed post-match analysis (where accuracy is paramount). 
+
+    As illustrated in Fig. \ref{fig1}, the solution is built upon a novel dual-pipeline framework that processes video data to deliver granular feedback:
+
+    \begin{enumerate}
+        \item \textbf{Pose Pipeline (Real-Time Mode):} Designed for immediate feedback, this pipeline utilizes a lightweight architecture that processes skeletal landmarks exclusively. It achieves ultra-low latency ($\sim$50ms), allowing players to receive corrective cues instantly during practice sessions. It relies on a Convolutional-LSTM network to capture local temporal dynamics.
+        
+        \item \textbf{Hybrid Pipeline (Forensic Mode):} Designed for in-depth analysis, this pipeline fuses skeletal data with visual context (e.g., racket orientation, grip nuances) extracted via a custom Residual-Shuffle Network (RSN). The temporal modeling is handled by an Attention-enhanced Temporal Convolutional Network (Attention-TCN) featuring dilated causal convolutions with Multi-Head Self-Attention. While computationally heavier, it provides the high-fidelity biomechanical data necessary for detailed performance reviews.
+        
+        \item \textbf{Intelligent Feedback Engine (KSI):} The solution moves beyond simple error detection by introducing an enhanced Kinematic Similarity Index (KSI). This engine treats sports motion as a temporal sequence, comparing user movements against a library of expert biomechanical templates using 32 hierarchical features. It accounts for variations in speed and body type through DTW alignment with Sakoe-Chiba band constraints, ensuring that the feedback is personalized and biomechanically valid.
+    \end{enumerate}
+
+    \begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.9\textwidth]{System_architecture.jpeg}
+    \caption{Overview of the proposed Smashifix dual-pipeline architecture, illustrating the real-time Pose Pipeline, the forensic Hybrid Pipeline with RSN backbone and Attention-TCN, and the KSI feedback engine}\label{fig1}
+    \end{figure}
+    \clearpage
+    %%==================================%%
+    %% METHODOLOGY
+    %%==================================%%
+
+    \section{Methodology}\label{sec4}
+
+    This section details the technical implementation, mathematical formulations, and algorithmic logic that power the Smashifix solution.
+
+    \subsection{Data Preprocessing}
+
+    \subsubsection{Video Segmentation}
+    To reduce noise from pre-shot and post-shot idling, the system processes fixed-duration segments rather than entire clips. Let a video have FPS $f$ and total frames $N$. Given a target segment length $s$ (typically 1.75s--2.0s), the segment length in frames is $M = \lfloor s \cdot f \rfloor$.
+
+    For standard strokes (e.g., Smashes, Drives), \textit{Tail-Window Extraction} is employed to capture the follow-through:
     \begin{equation}
-        Accuracy = \frac{TP + TN}{TP + TN + FP + FN}
+    t_{0} = \max(0, N-M), \quad t \in [t_{0}, t_{0}+M)
     \end{equation}
-    
-    \item \textbf{Precision:} The ratio of correctly predicted positive observations to the total predicted positives.
+    \noindent where:
+    \begin{itemize}
+        \item $t_0$: The start frame index of the segment.
+        \item $N$: The total number of frames in the raw video clip.
+        \item $M$: The calculated window size (in frames) representing the action duration.
+    \end{itemize}
+
+    For specific defensive shots like Lifts, \textit{Middle-Window Extraction} is utilized to center the contact point:
     \begin{equation}
-        Precision = \frac{TP}{TP + FP}
+    t_{0} = \max(0, \lfloor \frac{N}{2} \rfloor - \lfloor \frac{M}{2} \rfloor)
     \end{equation}
-    
-    \item \textbf{Recall:} The ratio of correctly predicted positive observations to all observations in the actual class.
+
+    \subsubsection{Spatial Cropping and Robust Tracking}
+    To stabilize pose detection, a deterministic crop is applied. For the Hybrid pipeline, a dynamic Region of Interest (ROI) is computed based on visible joints $J_{v}$ where visibility $v_{j} \ge v_{min}$. The bounding box is determined by the extrema of visible landmarks:
     \begin{equation}
-        Recall = \frac{TP}{TP + FN}
+    x_{1} = \min_{j \in J_{v}} x_{j}, \quad x_{2} = \max_{j \in J_{v}} x_{j}
     \end{equation}
-    
-    \item \textbf{F1-Score:} The weighted average of Precision and Recall.
+    \noindent where:
+    \begin{itemize}
+        \item $x_1, x_2$: The minimum and maximum x-coordinates defining the bounding box width.
+        \item $J_v$: The set of skeletal joints detected with confidence above threshold $v_{min}$.
+    \end{itemize}
+
+    \begin{figure}[h]
+    \centering
+    \includegraphics[width=0.45\textwidth]{roi_extraction.png}
+    \caption{Region of Interest (ROI) extraction from a video frame, showing the skeleton-derived bounding box with temporal EMA smoothing applied to prevent jitter}\label{fig_roi}
+    \end{figure}
+
+    To prevent jitter, Temporal Smoothing is applied to the box coordinates $B_t$ using an Exponential Moving Average (EMA):
     \begin{equation}
-        F1 = 2 \cdot \frac{Precision \cdot Recall}{Precision + Recall}
+    B_{t} \leftarrow (1-\lambda)B_{t} + \lambda B_{t-1}
     \end{equation}
-\end{enumerate}
-\noindent where $TP$ = True Positives, $TN$ = True Negatives, $FP$ = False Positives, and $FN$ = False Negatives.
+    \noindent where:
+    \begin{itemize}
+        \item $B_t$: The bounding box coordinates at the current frame $t$.
+        \item $B_{t-1}$: The bounding box coordinates from the previous frame.
+        \item $\lambda$: The smoothing factor (set to 0.7), which controls the trade-off between responsiveness and stability.
+    \end{itemize}
 
-\subsection{Quantitative Results}
-The performance of the proposed pipelines on the test set is summarized in Table \ref{tab_results}. The Attention-TCN pipeline demonstrated superior performance due to the inclusion of visual context features and temporal self-attention, achieving an F1-Score of 0.85, significantly higher than the visual-only baseline.
+    \begin{figure}[h]
+    \centering
+    \includegraphics[width=0.45\textwidth]{mediapipe_keypoints.png}
+    \caption{Skeletal keypoint extraction using MediaPipe Pose, illustrating the 33 landmarks detected per frame that form the 99-dimensional normalized pose vector}\label{fig_keypoints}
+    \end{figure}
 
-\begin{table}[h]
-\caption{Classification Performance Results}\label{tab_results}
-\centering
-% Increase horizontal padding to make it wider
-\setlength{\tabcolsep}{12pt} 
-% Increase vertical padding to make rows taller
-\renewcommand{\arraystretch}{1.5} 
-\begin{tabular}{|l|c|c|c|c|}
-\hline
-\textbf{Model Architecture} & \textbf{Accuracy} & \textbf{Precision} & \textbf{Recall} & \textbf{F1-Score} \\
-\hline
-Pose-LSTM (Real-time) & 0.81 & 0.79 & 0.78 & 0.78 \\
-\hline
-\textbf{Attention-TCN (Proposed)} & \textbf{0.86} & \textbf{0.85} & \textbf{0.84} & \textbf{0.85} \\
-\hline
-RSN (Visual only) & 0.74 & 0.72 & 0.71 & 0.71 \\
-\hline
-\end{tabular}
-\end{table}
+    \subsubsection{Geometric Pose Normalization (99D)}
+    To ensure the model learns posture rather than camera position, a three-step normalization is applied to the raw 33 landmarks $P \in \mathbb{R}^{33\times3}$:
+    \begin{enumerate}
+        \item \textbf{Centering:} The skeleton is translated so the hip center $c$ becomes the origin:
+        \begin{equation}
+        c = \frac{P_{LH} + P_{RH}}{2}, \quad \tilde{P} = P - c
+        \end{equation}
+        \noindent where $c$ is the calculated midpoint between the Left Hip ($P_{LH}$) and Right Hip ($P_{RH}$), and $\tilde{P}$ represents the translated coordinates.
+        
+        \item \textbf{Alignment:} A spine vector $s$ is defined from the hip center to the shoulder midpoint. An orthonormal basis $R = [\hat{x}; \hat{y}; \hat{z}]$ is constructed such that the spine aligns with the vertical Y-axis. The pose is rotated via $P' = \tilde{P}R^T$.
+        
+        \item \textbf{Scaling:} The pose is normalized by the spine length $l = \|s\|$ to achieve scale invariance:
+        \begin{equation}
+        \overline{P} = \frac{P'}{l}
+        \end{equation}
+        \noindent where $\overline{P}$ is the final normalized pose vector and $l$ is the Euclidean length of the user's spine in the frame.
+    \end{enumerate}
 
-\begin{figure}[h]
-\centering
-\includegraphics[width=0.9\textwidth]{final_prediction_pipeline.jpeg}
-\caption{Final Prediction Pipeline}\label{fig3}
-\end{figure}
+    \subsection{Hybrid Feature Engineering}
 
-\subsection{Comparative Analysis}
-To validate the effectiveness of the Smashifix system, the results were compared against the methods discussed in the Literature Survey. Table \ref{tab_comparative_results} highlights that while specialized classification models (like Tukino et al.) achieve marginally higher accuracy, they lack the feedback granularity provided by the Smashifix system. The proposed system offers the optimal balance of accuracy and utility, providing dynamic biomechanical feedback for complex sequences which other systems lack.
+    \subsubsection{Residual-Shuffle Network (RSN) Backbone}
+    For the Hybrid pipeline, a compact visual embedding is extracted to capture context (e.g., racket position, grip nuances). Unlike conventional approaches that use pre-trained ImageNet models such as MobileNetV2, the Smashifix system employs a custom Residual-Shuffle Network (RSN) inspired by the ShuffleNet V2 \cite{b15} design principles. The RSN is a lightweight, efficient backbone that combines residual connections with channel shuffling for effective cross-group information mixing.
 
-\begin{table}[h]
-\caption{Comparative Analysis with State-of-the-Art Methods}\label{tab_comparative_results}
-\centering
-% Increased padding to make the table wider
-\setlength{\tabcolsep}{12pt} 
-% Increased row height to make the table taller
-\renewcommand{\arraystretch}{1.5} 
-\begin{tabular}{|l|c|l|l|}
-\hline
-\textbf{Method} & \textbf{Accuracy} & \textbf{Feedback Type} & \textbf{Scope} \\
-\hline
-Tukino et al. \cite{b9} & 89.2\% & None (Class Label) & Single Stroke \\
-\hline
-Bhosale et al. \cite{b20} & 82.0\% & Static Overlay & Static Pose \\
-\hline
-Asriani et al. \cite{b10} & 98.6\% & None (Class Label) & Single Stroke \\
-\hline
-\textbf{Smashifix (Proposed)} & \textbf{86.0\%} & \textbf{Dynamic Biomechanical} & \textbf{Complex Sequence} \\
-\hline
-\end{tabular}
-\end{table}
+    The RSN architecture consists of:
+    \begin{itemize}
+        \item \textbf{Stem:} A $3 \times 3$ convolution with stride 2 followed by batch normalization, ReLU activation, and max pooling for initial feature extraction and spatial downsampling.
+        \item \textbf{Shuffle Units (4 Stages):} Each stage comprises multiple Shuffle Units. For stride-1 units, the input channels are split in half: one half passes through an identity shortcut while the other is processed by a bottleneck consisting of $1 \times 1$ Conv $\rightarrow$ Depthwise $3 \times 3$ Conv $\rightarrow$ $1 \times 1$ Conv, each followed by batch normalization and ReLU. For stride-2 units, both branches downsample, effectively doubling the channel count. After concatenation, a channel shuffle operation redistributes information across groups.
+        \item \textbf{Global Average Pooling + Projection:} The backbone output is reduced to a global feature vector, projected to $d$ dimensions via a dense layer with ReLU activation, and L2-normalized.
+    \end{itemize}
 
-To further validate the approach, Table \ref{tab_cross_sport} compares the proposed system against methods from other sporting domains, demonstrating the generalizability of the dual-pipeline and biomechanical feedback approach.
+    The channel shuffle operation can be described as a reshape-transpose-flatten sequence on the channel dimension:
+    \begin{equation}
+    \text{Shuffle}(x, g) = \text{Flatten}\left(\text{Transpose}\left(\text{Reshape}(x, [B, H, W, g, C/g]), [0,1,2,4,3]\right)\right)
+    \end{equation}
+    \noindent where $g$ is the number of groups (set to 4) and $C$ is the total channel count.
 
-\begin{table}[h]
-\caption{Cross-Sport Comparative Analysis}\label{tab_cross_sport}
-\centering
-\setlength{\tabcolsep}{6pt}
-\renewcommand{\arraystretch}{1.3}
-\begin{tabular}{|l|l|c|l|l|}
-\hline
-\textbf{Method} & \textbf{Sport} & \textbf{Accuracy} & \textbf{Feedback} & \textbf{Input} \\
-\hline
-Siddiqui et al. \cite{b11} & Cricket & 99.7\% & None & Skeleton \\
-\hline
-Harini et al. \cite{b21} & Squat Exercise & 91.0\% & Rule-based & Skeleton \\
-\hline
-Chen et al. \cite{b26} & General Sports & -- & DTW-based & Skeleton \\
-\hline
-\textbf{Smashifix (Proposed)} & \textbf{Badminton} & \textbf{86.0\%} & \textbf{KSI + DTW} & \textbf{Skeleton + Visual} \\
-\hline
-\end{tabular}
-\end{table}
+    The ROI-cropped frame $I_t$ is resized to $224 \times 224$ and passed through the pre-trained RSN:
+    \begin{equation}
+    h_{t} = \text{RSN}(I_{t}) \in \mathbb{R}^{d}
+    \end{equation}
+    \noindent where $h_t$ is the feature map extracted from input image $I_t$.
 
-%%==================================%%
-%% CONCLUSION
-%%==================================%%
+    This embedding is projected to 64 dimensions and L2-normalized:
+    \begin{equation}
+    u_{t} = \text{ReLU}(W h_{t} + b), \quad c_{t} = \frac{u_{t}}{\|u_{t}\|_2}
+    \end{equation}
+    \noindent where $W$ and $b$ are learnable weights and biases, and $c_t$ is the normalized context vector.
 
-\section{Conclusion}\label{sec6}
-Smashifix represents a significant advancement in automated sports coaching. By integrating deep learning-based classification with forensic biomechanical analysis, the system provides a comprehensive solution for badminton training. The dual-pipeline architecture, featuring an Attention-enhanced TCN with a custom RSN backbone, effectively addresses the trade-off between real-time feedback and analytical depth. Furthermore, the mathematical rigor of the KSI scoring system---utilizing Sakoe-Chiba constrained DTW, phase-aware attention, 32 hierarchical biomechanical features, and differential kinematics---ensures that the feedback is not just accurate, but biomechanically valid. Future work will focus on multi-player tracking and deploying the lightweight models to edge devices for widespread accessibility.
+    \subsubsection{Feature Fusion}
+    The final feature vector $x_t$ is the concatenation of the normalized pose and the visual embedding:
+    \begin{equation}
+    x_{t} = [\text{vec}(\overline{P}_{t}) \parallel c_{t}] \in \mathbb{R}^{163}
+    \end{equation}
 
-\section{Future Scope}
-While Smashifix successfully demonstrates the viability of automated badminton coaching, several avenues for significant expansion remain.
+    \subsection{Model Implementation}
+    The model architecture is illustrated in Fig. \ref{fig2}.
 
-\subsection{Multi-Person Tracking and Re-Identification}
-The current system assumes a single active player in the frame. To address the complexities of doubles matches or crowded training environments, future work will integrate robust player re-identification modules. As highlighted by Ribeiro et al. \cite{b30}, maintaining identity consistency in dynamic sports scenes with frequent occlusions is critical for scaling analytics to real-world match scenarios.
+    \begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\textwidth]{Model_architecture.jpeg}
+    \caption{Detailed model architecture showing the dual-branch Attention-TCN with visual and pose feature fusion, alongside the lightweight Conv-LSTM pose pipeline}\label{fig2}
+    \end{figure}
 
-\subsection{Edge-Device Deployment}
-To democratize access to high-quality coaching, future work aims to transition from server-side processing to mobile-native inference. By quantizing the lightweight Pose-LSTM models, the system can be deployed directly on smartphones. This addresses the hardware dependency gap and ensures the tool is accessible to amateur players without high-end computational resources.
+    \subsubsection{Classification Architectures}
+    \begin{itemize}
+        \item \textbf{Pose Pipeline:} A Convolutional-LSTM network consisting of a Conv1D layer (128 filters, kernel size 4) to capture local temporal dynamics, followed by two stacked LSTM layers (128 and 64 units) with batch normalization and dropout regularization ($0.3$--$0.4$).
+        \item \textbf{Hybrid Pipeline (Attention-TCN):} A dual-branch architecture combining an Attention-enhanced Temporal Convolutional Network with a late fusion strategy:
+        \begin{itemize}
+            \item \textit{CNN/Visual Branch:} The visual feature sequence undergoes an initial $1 \times 1$ projection to $F$ filters, followed by a deep TCN consisting of 4 dilated causal Conv1D layers with dilations $d \in \{1, 2, 4, 8\}$. Each TCN layer includes batch normalization, ReLU activation, spatial dropout, and a residual connection. The receptive field of this TCN spans 31 frames. The output is then processed by a Multi-Head Self-Attention layer ($h$ heads, key dimension $k$) with a residual connection and layer normalization, followed by a GRU layer ($G$ units).
+            \item \textit{Pose Branch:} The normalized pose sequence is processed by a Conv1D layer ($F$ filters, kernel size 3, causal padding), followed by an identical Multi-Head Self-Attention block and a GRU layer ($G$ units) with batch normalization.
+            \item \textit{Fusion:} The outputs of both branches are concatenated and passed through two dense layers ($F_{\text{fuse}}$ and $F_{\text{fuse}}/2$ units) with dropout, terminating in a softmax classifier.
+        \end{itemize}
+    \end{itemize}
 
-\subsection{Advanced Biomechanical Modeling}
-Currently, the system utilizes skeletal pose estimation. Future iterations will incorporate dense surface modeling, such as DensePose \cite{b8}, to capture the full 3D mesh of the human body. This enhancement would allow for the analysis of muscle activation patterns and complex torso rotations that are often missed by simple joint-landmark models, providing a deeper layer of physiological feedback.
+    The dilated causal convolution for layer $l$ with dilation rate $d_l$ can be expressed as:
+    \begin{equation}
+    \text{DilConv}(x_t, d_l) = \sum_{k=0}^{K-1} w_k \cdot x_{t - d_l \cdot k}
+    \end{equation}
+    \noindent where $K$ is the kernel size (set to 3), $w_k$ are the learned filter weights, and the causal constraint ensures $t - d_l \cdot k \ge 0$.
 
-\subsection{Deep Metric Learning}
-Future work will transition from the hand-engineered features of the Kinematic Similarity Index (KSI) to data-driven similarity metrics. Following the approach of Liu et al. \cite{b25}, neural networks can be trained to learn optimal distance functions directly from expert data. This would allow the system to capture subtler nuances of elite motion that predefined mathematical formulas may overlook.
-\backmatter
+    The Multi-Head Self-Attention mechanism computes:
+    \begin{equation}
+    \text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right) V
+    \end{equation}
+    \noindent where $Q$, $K$, and $V$ are the query, key, and value projections of the input sequence, and $d_k$ is the key dimension. The multi-head variant concatenates $h$ independent attention heads and projects the result. A residual connection preserves gradient flow:
+    \begin{equation}
+    y = \text{LayerNorm}(x + \text{MultiHead}(x, x, x))
+    \end{equation}
 
-\section*{Statements and Declarations}
-\begin{itemize}
-\item \textbf{Funding:} No funding was received for this research.
-\item \textbf{Competing Interests:} The authors declare no competing interests.
-\item \textbf{Ethics approval:} Not applicable.
-\item \textbf{Consent to participate:} Not applicable.
-\item \textbf{Data availability:} The datasets generated during the current study are available from the corresponding author on reasonable request. The primary dataset used is publicly available on Kaggle \cite{b28}.
-\item \textbf{Code availability:} Code available upon request.
-\item \textbf{Author contribution:} All authors contributed to the study conception and design.
-\end{itemize}
+    The hyperparameters of the Attention-TCN were optimized using Optuna \cite{b27} with a Bayesian search strategy. The tuned values are: $F = 80$ filters, $G = 80$ GRU units, $h = 8$ attention heads, $k = 32$ key dimension, $F_{\text{fuse}} = 80$ fusion units, L2 regularization $\lambda = 7.6 \times 10^{-5}$, dropout rate $p = 0.22$, learning rate $\eta = 5.6 \times 10^{-4}$, and label smoothing $\epsilon = 0.1$.
 
-%%==================================%%
-%% REFERENCES
-%%==================================%%
+    \subsubsection{Contact-Aware Prediction Algorithm}
+    To improve accuracy, the specific temporal window containing the stroke contact point is identified. A composite arm velocity $v_t$ is calculated based on the right shoulder, elbow, and wrist. The window with the maximum acceleration magnitude $A$ is selected for the final prediction:
+    \begin{equation}
+    A = \|\Delta v\|_2, \quad \text{Class} = \arg\max_{c} p(c | X_{peak\_acc})
+    \end{equation}
+    \noindent where $A$ is the magnitude of acceleration, and $\Delta v$ represents the change in velocity vectors between consecutive frames.
 
-\begin{thebibliography}{00}
+    \subsection{Biomechanical Analysis (KSI Algorithm)}
+    The core of the feedback mechanism is the enhanced Kinematic Similarity Index (KSI), which compares the user's motion sequence $U$ against a DTW-aligned expert template $E$. KSI extends the original algorithm with 32 hierarchical biomechanical features, contact-centered windowing, confidence filtering, and jerk analysis.
 
-\bibitem{b1} Wang CY et al (2020) Tennis player actions dataset for human pose estimation. IEEE Access 8:12345--12356
+    \subsubsection{Enhanced Feature Extraction (32D)}
+    KSI extracts 32 hierarchical biomechanical features per frame, organized into six categories:
+    \begin{itemize}
+        \item \textbf{Joint Angles (12):} Elbow flexion, shoulder elevation, shoulder abduction, knee flexion, hip flexion, and ankle dorsiflexion for both left and right sides.
+        \item \textbf{Limb Ratios (6):} Full arm extension, full leg extension, and forearm-to-upper-arm ratio, normalized by torso length for scale invariance.
+        \item \textbf{Spinal Alignment (4):} Forward lean (sagittal), lateral lean (frontal), spine twist (transverse), and normalized spine length.
+        \item \textbf{Rotational Dynamics (4):} Hip-shoulder separation angle (critical for power generation), hip rotation, shoulder rotation, and trunk rotation velocity.
+        \item \textbf{Wrist Dynamics (3):} Wrist height, horizontal reach, and radial deviation---all normalized relative to the torso.
+        \item \textbf{Center of Mass (3):} Approximate CoM displacement in $x$, $y$, and $z$ axes, computed as a weighted average of hip (50\%), shoulder (30\%), and knee (20\%) positions.
+    \end{itemize}
 
-\bibitem{b2} Zhang X et al (2021) Research on badminton teaching technology based on human pose estimation algorithm. Int J Adv Comput Sci Appl 12(5)
+    \subsubsection{Confidence Filtering}
+    Before analysis, unreliable frames are filtered based on two criteria:
+    \begin{enumerate}
+        \item \textbf{Anatomical Plausibility:} Limb length ratios are checked against expected anthropometric ranges. Frames with anatomically implausible configurations are rejected.
+        \item \textbf{Temporal Consistency:} Frames exhibiting sudden landmark displacements exceeding 0.3 (in normalized coordinates) between consecutive frames are flagged as tracking artifacts and excluded.
+    \end{enumerate}
 
-\bibitem{b3} Dibenedetto G et al (2022) A comprehensive review of deep learning-based human pose estimation. Comput Vis Image Underst 223
+    \subsubsection{Contact-Centered Windowing}
+    To focus computational resources on the most biomechanically relevant portion of the sequence, a contact-centered window is applied. The contact frame $t_c$ is first identified from the shot phase segmentation, and a window of $\pm W$ frames is extracted:
+    \begin{equation}
+    \text{Window} = [t_c - W_{\text{pre}}, \; t_c + W_{\text{post}}]
+    \end{equation}
+    \noindent where $W_{\text{pre}}$ and $W_{\text{post}}$ are the pre-contact and post-contact window sizes (set to 18 frames each, covering approximately 600ms at 30 FPS).
 
-\bibitem{b4} Cao Z, Simon T, Wei SE, Sheikh Y (2017) Realtime multi-person 2D pose estimation using part affinity fields. In: Proceedings of the IEEE conference on computer vision and pattern recognition (CVPR), pp 7291--7299
+    \subsubsection{Dynamic Time Warping (DTW) with Sakoe-Chiba Band}
+    To account for temporal variations (speed of execution), DTW is employed to align the sequences by minimizing the cumulative Euclidean distance. The recurrence relation for the cost matrix $D$ is:
+    \begin{equation}
+    D_{i,j} = \|F_{i}^{E} - F_{j}^{U}\|_2 + \min\{D_{i-1,j}, D_{i,j-1}, D_{i-1,j-1}\}
+    \end{equation}
+    \noindent where:
+    \begin{itemize}
+        \item $D_{i,j}$: The cumulative cost to align Expert frame $i$ with User frame $j$.
+        \item $F_{i}^{E}, F_{j}^{U}$: The biomechanical feature vectors for the Expert and User respectively.
+        \item $\|\cdot\|_2$: The Euclidean distance metric.
+    \end{itemize}
 
-\bibitem{b5} Lugaresi C, Tang J, Nash H et al (2019) MediaPipe: a framework for building perception pipelines. arXiv preprint arXiv:1906.08172
+    To improve computational efficiency and prevent pathological alignments, a Sakoe-Chiba band constraint \cite{b29} is applied. This restricts the warping path to a band of width $r$ around the diagonal:
+    \begin{equation}
+    |i - j| \le r, \quad r = \lfloor \beta \cdot \max(N_E, N_U) \rfloor
+    \end{equation}
+    \noindent where $\beta$ is the band ratio (set to 0.2) and $N_E$, $N_U$ are the lengths of the expert and user sequences respectively.
 
-\bibitem{b6} Bazarevsky V, Grishchenko I, Raveendran K et al (2020) BlazePose: on-device real-time body pose tracking. arXiv preprint arXiv:2006.10204
+    \subsubsection{Phase-Aware Attention}
+    The system segments the aligned shot into five biomechanical phases: \textit{Preparation, Loading, Acceleration, Contact,} and \textit{Follow-through}. An attention weight $\alpha_k$ is assigned to each frame using a Gaussian envelope centered on the phase:
+    \begin{equation}
+    \alpha_{k} = w_{phase} \cdot \left(0.5 + 0.5\exp\left(-0.5\left(\frac{k-center}{width}\right)^{2}\right)\right)
+    \end{equation}
+    \noindent where:
+    \begin{itemize}
+        \item $\alpha_k$: The importance weight assigned to frame $k$.
+        \item $w_{phase}$: The predefined weight of the current phase (e.g., Contact phase $w=3.0$, Acceleration phase $w=2.0$, Preparation phase $w=0.8$).
+        \item $center$: The frame index representing the midpoint of the phase.
+        \item $width$: A parameter controlling the spread of the Gaussian curve (phase duration).
+    \end{itemize}
 
-\bibitem{b7} Toshev A, Szegedy C (2014) DeepPose: human pose estimation via deep neural networks. In: Proceedings of the IEEE conference on computer vision and pattern recognition (CVPR), pp 1653--1660
+    \subsubsection{Scoring Components}
+    The final KSI score is an aggregate of four differential kinematic similarities:
 
-\bibitem{b8} G\"uler RA, Neverova N, Kokkinos I (2018) DensePose: dense human pose estimation in the wild. In: Proceedings of the IEEE conference on computer vision and pattern recognition (CVPR), pp 7297--7306
+    \textbf{Pose Similarity ($S_{pose}$):} Computed as the attention-weighted cosine similarity of the feature vectors:
+    \begin{equation}
+    S_{pose} = \frac{\sum_{k}\alpha_{k} \cdot \frac{F_k^E \cdot F_k^U}{\|F_k^E\| \cdot \|F_k^U\|}}{\sum_{k}\alpha_{k}}
+    \end{equation}
 
-\bibitem{b9} Tukino T et al (2024) Deep learning-based technical classification of badminton pose with CNNs. Int J Artif Intell Res 8(1)
+    \textbf{Velocity Similarity ($S_{vel}$):} Incorporates both directional alignment and magnitude matching:
+    \begin{equation}
+    S_{vel} = \frac{\sum_{k}\alpha_{k} \cdot \text{cos}_{vel,k} \cdot \exp(-0.1\|V_k^E - V_k^U\|^2)}{\sum_{k}\alpha_{k}}
+    \end{equation}
+    \noindent where:
+    \begin{itemize}
+        \item $\text{cos}_{vel,k}$: The cosine similarity between the direction of the User's velocity and Expert's velocity at frame $k$.
+        \item $V^E, V^U$: The magnitude of velocity vectors for Expert and User.
+    \end{itemize}
 
-\bibitem{b10} Asriani F et al (2023) A hybrid model of vision transformer and skeleton-based features for badminton. Sensors 23(4)
+    \textbf{Acceleration Similarity ($S_{acc}$)} and \textbf{Jerk Similarity ($S_{jerk}$)} follow analogous formulations using the second and third temporal derivatives of the feature sequences, respectively.
 
-\bibitem{b11} Siddiqui HUR et al (2023) Enhancing cricket performance analysis with human pose estimation. Procedia Comput Sci 217:56--65
+    The final weighted KSI score is computed as:
+    \begin{equation}
+    \text{KSI}_{\text{total}} = w_p \cdot S_{pose} + w_v \cdot S_{vel} + w_a \cdot S_{acc}
+    \end{equation}
+    \noindent where $w_p = 0.4$, $w_v = 0.4$, and $w_a = 0.2$ are the component weights.
 
-\bibitem{b12} Donahue J, Hendricks LA, Guadarrama S et al (2015) Long-term recurrent convolutional networks for visual recognition and description. In: Proceedings of the IEEE conference on computer vision and pattern recognition (CVPR), pp 2625--2634
+    \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\textwidth]{final_prediction_pipeline.jpeg}
+    \caption{End-to-end prediction pipeline showing the flow from video input through pose estimation, feature extraction, dual-pipeline classification, and KSI-based biomechanical feedback generation}\label{fig3}
+    \end{figure}
 
-\bibitem{b13} Simonyan K, Zisserman A (2014) Two-stream convolutional networks for action recognition in videos. In: Advances in neural information processing systems (NeurIPS), pp 568--576
+    %%==================================%%
+    %% EXPERIMENTS & RESULTS
+    %%==================================%%
 
-\bibitem{b14} Carreira J, Zisserman A (2017) Quo vadis, action recognition? A new model and the Kinetics dataset. In: Proceedings of the IEEE conference on computer vision and pattern recognition (CVPR), pp 6299--6308
+    \section{Experiments and Results}\label{sec5}
 
-\bibitem{b15} Ma N, Zhang X, Zheng HT, Sun J (2018) ShuffleNet V2: practical guidelines for efficient CNN architecture design. In: Proceedings of the European conference on computer vision (ECCV), pp 116--131
+    \subsection{Dataset Description}
+    The system was trained on the ``Badminton Stroke Video Dataset'' sourced from Kaggle \cite{b28}, augmented with proprietary high-definition footage. The dataset comprises 1.32 GB of data capturing human subjects performing strokes from multiple angles under consistent lighting conditions. It is categorized into six distinct stroke classes (Forehand Clear, Drive, Lift, Net Shot; Backhand Drive, Net Shot). Representative frames from each stroke class are shown in Fig.~\ref{fig_dataset_samples}. The data was partitioned using a stratified split: Training Set (70\%), Validation Set (15\%), and Test Set (15\%). The distribution of samples across all stroke classes and data splits is presented in Fig.~\ref{fig_class_dist}.
 
-\bibitem{b16} Samma H, Bin Sama SR (2024) Optimized deep learning vision system for human action recognition from drone images. Multimed Tools Appl 83:12345--12367. https://doi.org/10.1007/s11042-023-16456-2
+    \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\textwidth]{fig_dataset_samples.png}
+    \caption{Representative sample frames from each of the six badminton stroke classes in the dataset, captured from monocular video under consistent lighting conditions}\label{fig_dataset_samples}
+    \end{figure}
 
-\bibitem{b17} Pham VT et al (2022) A lightweight graph convolutional network for skeleton-based action recognition. Multimed Tools Appl 81:30741--30763. https://doi.org/10.1007/s11042-022-12931-w
+    \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.85\textwidth]{fig_class_distribution.png}
+    \caption{Distribution of samples across six stroke classes for the training, validation, and test splits, showing the balanced representation achieved through stratified sampling}\label{fig_class_dist}
+    \end{figure}
 
-\bibitem{b18} Yuan J et al (2023) A lightweight graph convolutional network with multi-attention mechanisms for action recognition in intelligent online physical education. Multimed Tools Appl 82:40123--40145. https://doi.org/10.1007/s11042-023-15698-w
 
-\bibitem{b19} Vaswani A, Shazeer N, Parmar N et al (2017) Attention is all you need. In: Advances in neural information processing systems (NeurIPS), pp 5998--6008
+    \subsection{Evaluation Metrics}
+    To rigorously assess the performance of the classification pipelines, the following metrics were employed:
 
-\bibitem{b20} Bhosale V et al (2021) Yoga pose detection and correction using PoseNet and KNN. Int J Eng Res Technol 10
+    \begin{enumerate}
+        \item \textbf{Accuracy:} The ratio of correctly predicted observations to the total observations.
+        \begin{equation}
+            Accuracy = \frac{TP + TN}{TP + TN + FP + FN}
+        \end{equation}
+        
+        \item \textbf{Precision:} The ratio of correctly predicted positive observations to the total predicted positives.
+        \begin{equation}
+            Precision = \frac{TP}{TP + FP}
+        \end{equation}
+        
+        \item \textbf{Recall:} The ratio of correctly predicted positive observations to all observations in the actual class.
+        \begin{equation}
+            Recall = \frac{TP}{TP + FN}
+        \end{equation}
+        
+        \item \textbf{F1-Score:} The weighted average of Precision and Recall.
+        \begin{equation}
+            F1 = 2 \cdot \frac{Precision \cdot Recall}{Precision + Recall}
+        \end{equation}
+    \end{enumerate}
+    \noindent where $TP$ = True Positives, $TN$ = True Negatives, $FP$ = False Positives, and $FN$ = False Negatives.
 
-\bibitem{b21} Harini R et al (2022) Real-time posture correction of squat exercise. Procedia Comput Sci 201:234--241
+    \subsection{Quantitative Results}
+    The performance of the proposed pipelines on the test set is summarized in Table \ref{tab_results}. The Attention-TCN pipeline demonstrated superior performance due to the inclusion of visual context features and temporal self-attention, achieving an F1-Score of 0.85, significantly higher than the visual-only baseline.
 
-\bibitem{b22} Wang Q (2020) Application of human posture recognition based on the CNN in physical training. J Phys Conf Ser 1533
+    \begin{table}[h]
+    \caption{Classification Performance Results}\label{tab_results}
+    \centering
+    \setlength{\tabcolsep}{6pt}
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabular}{|l|c|c|c|c|}
+    \hline
+    \textbf{Model Architecture} & \textbf{Accuracy} & \textbf{Precision} & \textbf{Recall} & \textbf{F1-Score} \\
+    \hline
+    Pose-LSTM (Real-time) & 0.81 & 0.79 & 0.78 & 0.78 \\
+    \hline
+    \textbf{Attention-TCN (Proposed)} & \textbf{0.86} & \textbf{0.85} & \textbf{0.84} & \textbf{0.85} \\
+    \hline
+    RSN (Visual only) & 0.74 & 0.72 & 0.71 & 0.71 \\
+    \hline
+    \end{tabular}
+    \end{table}
 
-\bibitem{b23} Stenum J, Ish\o i L (2021) 3D human pose estimation from a single image for biomechanical analysis. J Biomech 120
 
-\bibitem{b24} Nakashima P, Murai Y (2019) Automated baseball pitching analysis using deep learning. In: Proceedings of the IEEE/CVF international conference on computer vision (ICCV) workshops
 
-\bibitem{b25} Liu Y et al (2022) Deep metric learning for motion similarity. IEEE Trans Multimed 24
+    \subsection{Training Dynamics}
+    The training dynamics of both pipelines are illustrated through their epoch-wise accuracy and loss curves. Fig.~\ref{fig_tcn_curves} shows the Attention-TCN training over 193 epochs, reaching a peak validation accuracy of 94.70\% at epoch 165. The model exhibits slight overfitting in later epochs, with training accuracy exceeding validation accuracy, though the gap remains modest. Fig.~\ref{fig_lstm_curves} depicts the Pose-LSTM training over 71 epochs, converging to a best validation accuracy of 90.44\% at epoch 59, demonstrating faster but lower-ceiling convergence compared to the TCN.
 
-\bibitem{b26} Chen H et al (2023) Skeleton-based action quality assessment for intelligent sports education. Multimed Tools Appl 82:28901--28920. https://doi.org/10.1007/s11042-023-14582-5
+    \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\textwidth]{fig_tcn_training_curves.png}
+    \caption{Training and validation curves for the Attention-TCN pipeline over 193 epochs: (a) accuracy progression showing peak validation accuracy of 94.70\% at epoch 165, and (b) corresponding loss curves demonstrating consistent convergence}\label{fig_tcn_curves}
+    \end{figure}
 
-\bibitem{b27} Akiba T, Sano S, Yanase T, Ohta T, Koyama M (2019) Optuna: a next-generation hyperparameter optimization framework. In: Proceedings of the ACM SIGKDD international conference on knowledge discovery and data mining, pp 2623--2631
+    \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\textwidth]{fig_lstm_training_curves.png}
+    \caption{Training and validation curves for the Pose-LSTM pipeline over 71 epochs: (a) accuracy progression showing peak validation accuracy of 90.44\% at epoch 59, and (b) corresponding loss curves with characteristic LSTM oscillation during convergence}\label{fig_lstm_curves}
+    \end{figure}
 
-\bibitem{b28} Chang S (2024) Badminton Stroke Video Dataset. Kaggle. \url{https://www.kaggle.com/datasets/shenhuichang/badminton-storke-video}
+    A direct comparison of the validation accuracy trajectories of both models is presented in Fig.~\ref{fig_model_compare}. The overlay reveals that while the Pose-LSTM initially learns faster due to its simpler architecture and lower-dimensional input, the Attention-TCN ultimately surpasses it after approximately 60 epochs, benefiting from the richer visual context and temporal attention mechanism.
 
-\bibitem{b29} Sakoe H, Chiba S (1978) Dynamic programming algorithm optimization for spoken word recognition. IEEE Trans Acoust Speech Signal Process 26(1):43--49. https://doi.org/10.1109/TASSP.1978.1163055
+    \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.85\textwidth]{fig_model_comparison.png}
+    \caption{Overlay comparison of validation accuracy between the Attention-TCN and Pose-LSTM pipelines, illustrating the TCN's superior long-term convergence despite the LSTM's faster initial learning rate}\label{fig_model_compare}
+    \end{figure}
 
-\bibitem{b30} Ribeiro FM et al (2021) Person re-identification in sports: a systematic review. IEEE Access 9
+    \subsection{Hyperparameter Optimization}
+    The Attention-TCN architecture was optimized using Optuna with Bayesian Tree-structured Parzen Estimator (TPE) sampling over 46 trials. The search space included learning rate, number of TCN filters, attention heads, key dimension, GRU units, dropout rates, and batch size. Fig.~\ref{fig_optuna} presents the validation accuracy achieved by each trial, with a running-best line showing the optimization trajectory. The best configuration achieved 98.92\% validation accuracy at trial 13, after which the marginal returns from additional trials diminished.
 
-\end{thebibliography}
+    \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\textwidth]{fig_optuna_trials.png}
+    \caption{Optuna hyperparameter optimization results for the Attention-TCN over 46 trials using TPE sampling, with bars colour-coded by validation accuracy and a running-best line showing convergence to 98.92\%}\label{fig_optuna}
+    \end{figure}
 
-\end{document}
+    \subsection{Comparative Analysis}
+    To validate the effectiveness of the Smashifix system, the results were compared against the methods discussed in the Literature Survey. Table \ref{tab_comparative_results} highlights that while specialized classification models (like Tukino et al.) achieve marginally higher accuracy, they lack the feedback granularity provided by the Smashifix system. The proposed system offers the optimal balance of accuracy and utility, providing dynamic biomechanical feedback for complex sequences which other systems lack.
+
+    \begin{table}[h]
+    \caption{Comparative Analysis with State-of-the-Art Methods}\label{tab_comparative_results}
+    \centering
+    \setlength{\tabcolsep}{5pt}
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabular}{|l|c|l|l|}
+    \hline
+    \textbf{Method} & \textbf{Accuracy} & \textbf{Feedback Type} & \textbf{Scope} \\
+    \hline
+    Tukino et al. \cite{b9} & 89.2\% & None (Class Label) & Single Stroke \\
+    \hline
+    Bhosale et al. \cite{b20} & 82.0\% & Static Overlay & Static Pose \\
+    \hline
+    Asriani et al. \cite{b10} & 98.6\% & None (Class Label) & Single Stroke \\
+    \hline
+    \textbf{Smashifix (Proposed)} & \textbf{86.0\%} & \textbf{Dynamic Biomechanical} & \textbf{Complex Sequence} \\
+    \hline
+    \end{tabular}
+    \end{table}
+
+    To further validate the approach, Table \ref{tab_cross_sport} compares the proposed system against methods from other sporting domains, demonstrating the generalizability of the dual-pipeline and biomechanical feedback approach.
+
+    \begin{table}[h]
+    \caption{Cross-Sport Comparative Analysis}\label{tab_cross_sport}
+    \centering
+    \small
+    \setlength{\tabcolsep}{4pt}
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabular}{|l|l|c|l|l|}
+    \hline
+    \textbf{Method} & \textbf{Sport} & \textbf{Accuracy} & \textbf{Feedback} & \textbf{Input} \\
+    \hline
+    Siddiqui et al. \cite{b11} & Cricket & 99.7\% & None & Skeleton \\
+    \hline
+    Harini et al. \cite{b21} & Squat Exercise & 91.0\% & Rule-based & Skeleton \\
+    \hline
+    Chen et al. \cite{b26} & General Sports & -- & DTW-based & Skeleton \\
+    \hline
+    \textbf{Smashifix (Proposed)} & \textbf{Badminton} & \textbf{86.0\%} & \textbf{KSI + DTW} & \textbf{Skeleton + Visual} \\
+    \hline
+    \end{tabular}
+    \end{table}
+
+    %%==================================%%
+    %% CONCLUSION
+    %%==================================%%
+
+    \section{Conclusion}\label{sec6}
+    This paper presented Smashifix, a comprehensive automated coaching system for badminton that bridges the gap between amateur practice and professional-grade biomechanical analysis. The proposed dual-pipeline architecture successfully addresses two distinct use cases: the lightweight Pose-LSTM pipeline enables real-time on-court feedback with ultra-low latency ($\sim$50ms), while the Attention-enhanced TCN pipeline, powered by a custom RSN backbone, delivers high-fidelity forensic analysis with 86\% classification accuracy across six stroke types. The mathematical rigor of the KSI scoring system---employing Sakoe-Chiba constrained DTW, phase-aware attention weighting, 32 hierarchical biomechanical features, and differential kinematics---ensures that the corrective feedback is not merely accurate, but biomechanically valid and actionable. Experimental results demonstrated that Bayesian hyperparameter optimization via Optuna yielded a peak validation accuracy of 98.92\%, confirming the capacity of the architecture when optimally configured. The system was validated against existing state-of-the-art methods and demonstrated the optimal balance of classification accuracy and feedback granularity, providing dynamic biomechanical analysis that existing systems lack.
+
+    Several promising directions remain for future work. First, integrating multi-person tracking and re-identification modules \cite{b30} would extend the system to doubles matches and crowded training environments. Second, model quantization and deployment on edge devices such as smartphones would democratize access to high-quality coaching without requiring server-side computation. Third, incorporating dense surface modeling techniques such as DensePose \cite{b8} would enable the analysis of muscle activation patterns and complex torso rotations currently missed by joint-landmark models. Finally, transitioning the KSI from hand-engineered features to data-driven deep metric learning \cite{b25} would allow the system to capture subtler nuances of elite motion that predefined mathematical formulations may overlook.
+    \backmatter
+
+    \section*{Statements and Declarations}
+    \begin{itemize}
+    \item \textbf{Funding:} No funding was received for this research.
+    \item \textbf{Competing Interests:} The authors declare no competing interests.
+    \item \textbf{Ethics approval:} Not applicable.
+    \item \textbf{Consent to participate:} Not applicable.
+    \item \textbf{Data availability:} The datasets generated during the current study are available from the corresponding author on reasonable request. The primary dataset used is publicly available on Kaggle \cite{b28}.
+    \item \textbf{Code availability:} Code available upon request.
+    \item \textbf{Author contribution:} All authors contributed to the study conception and design.
+    \end{itemize}
+
+    %%==================================%%
+    %% REFERENCES
+    %%==================================%%
+
+    \begin{thebibliography}{00}
+
+    \bibitem{b1} Wang CY et al (2020) Tennis player actions dataset for human pose estimation. IEEE Access 8:12345--12356
+
+    \bibitem{b2} Zhang X et al (2021) Research on badminton teaching technology based on human pose estimation algorithm. Int J Adv Comput Sci Appl 12(5)
+
+    \bibitem{b3} Dibenedetto G et al (2022) A comprehensive review of deep learning-based human pose estimation. Comput Vis Image Underst 223
+
+    \bibitem{b4} Cao Z, Simon T, Wei SE, Sheikh Y (2017) Realtime multi-person 2D pose estimation using part affinity fields. In: Proceedings of the IEEE conference on computer vision and pattern recognition (CVPR), pp 7291--7299
+
+    \bibitem{b5} Lugaresi C, Tang J, Nash H et al (2019) MediaPipe: a framework for building perception pipelines. arXiv preprint arXiv:1906.08172
+
+    \bibitem{b6} Bazarevsky V, Grishchenko I, Raveendran K et al (2020) BlazePose: on-device real-time body pose tracking. arXiv preprint arXiv:2006.10204
+
+    \bibitem{b7} Toshev A, Szegedy C (2014) DeepPose: human pose estimation via deep neural networks. In: Proceedings of the IEEE conference on computer vision and pattern recognition (CVPR), pp 1653--1660
+
+    \bibitem{b8} G\"uler RA, Neverova N, Kokkinos I (2018) DensePose: dense human pose estimation in the wild. In: Proceedings of the IEEE conference on computer vision and pattern recognition (CVPR), pp 7297--7306
+
+    \bibitem{b9} Tukino T et al (2024) Deep learning-based technical classification of badminton pose with CNNs. Int J Artif Intell Res 8(1)
+
+    \bibitem{b10} Asriani F et al (2023) A hybrid model of vision transformer and skeleton-based features for badminton. Sensors 23(4)
+
+    \bibitem{b11} Siddiqui HUR et al (2023) Enhancing cricket performance analysis with human pose estimation. Procedia Comput Sci 217:56--65
+
+    \bibitem{b12} Donahue J, Hendricks LA, Guadarrama S et al (2015) Long-term recurrent convolutional networks for visual recognition and description. In: Proceedings of the IEEE conference on computer vision and pattern recognition (CVPR), pp 2625--2634
+
+    \bibitem{b13} Simonyan K, Zisserman A (2014) Two-stream convolutional networks for action recognition in videos. In: Advances in neural information processing systems (NeurIPS), pp 568--576
+
+    \bibitem{b14} Carreira J, Zisserman A (2017) Quo vadis, action recognition? A new model and the Kinetics dataset. In: Proceedings of the IEEE conference on computer vision and pattern recognition (CVPR), pp 6299--6308
+
+    \bibitem{b15} Ma N, Zhang X, Zheng HT, Sun J (2018) ShuffleNet V2: practical guidelines for efficient CNN architecture design. In: Proceedings of the European conference on computer vision (ECCV), pp 116--131
+
+    \bibitem{b16} Samma H, Bin Sama SR (2024) Optimized deep learning vision system for human action recognition from drone images. Multimed Tools Appl 83:12345--12367. https://doi.org/10.1007/s11042-023-16456-2
+
+    \bibitem{b17} Pham VT et al (2022) A lightweight graph convolutional network for skeleton-based action recognition. Multimed Tools Appl 81:30741--30763. https://doi.org/10.1007/s11042-022-12931-w
+
+    \bibitem{b18} Yuan J et al (2023) A lightweight graph convolutional network with multi-attention mechanisms for action recognition in intelligent online physical education. Multimed Tools Appl 82:40123--40145. https://doi.org/10.1007/s11042-023-15698-w
+
+    \bibitem{b19} Vaswani A, Shazeer N, Parmar N et al (2017) Attention is all you need. In: Advances in neural information processing systems (NeurIPS), pp 5998--6008
+
+    \bibitem{b20} Bhosale V et al (2021) Yoga pose detection and correction using PoseNet and KNN. Int J Eng Res Technol 10
+
+    \bibitem{b21} Harini R et al (2022) Real-time posture correction of squat exercise. Procedia Comput Sci 201:234--241
+
+    \bibitem{b22} Wang Q (2020) Application of human posture recognition based on the CNN in physical training. J Phys Conf Ser 1533
+
+    \bibitem{b23} Stenum J, Ish\o i L (2021) 3D human pose estimation from a single image for biomechanical analysis. J Biomech 120
+
+    \bibitem{b24} Nakashima P, Murai Y (2019) Automated baseball pitching analysis using deep learning. In: Proceedings of the IEEE/CVF international conference on computer vision (ICCV) workshops
+
+    \bibitem{b25} Liu Y et al (2022) Deep metric learning for motion similarity. IEEE Trans Multimed 24
+
+    \bibitem{b26} Chen H et al (2023) Skeleton-based action quality assessment for intelligent sports education. Multimed Tools Appl 82:28901--28920. https://doi.org/10.1007/s11042-023-14582-5
+
+    \bibitem{b27} Akiba T, Sano S, Yanase T, Ohta T, Koyama M (2019) Optuna: a next-generation hyperparameter optimization framework. In: Proceedings of the ACM SIGKDD international conference on knowledge discovery and data mining, pp 2623--2631
+
+    \bibitem{b28} Chang S (2024) Badminton Stroke Video Dataset. Kaggle. \url{https://www.kaggle.com/datasets/shenhuichang/badminton-storke-video}
+
+    \bibitem{b29} Sakoe H, Chiba S (1978) Dynamic programming algorithm optimization for spoken word recognition. IEEE Trans Acoust Speech Signal Process 26(1):43--49. https://doi.org/10.1109/TASSP.1978.1163055
+
+    \bibitem{b30} Ribeiro FM et al (2021) Person re-identification in sports: a systematic review. IEEE Access 9
+
+    \end{thebibliography}
+
+    \end{document}
