@@ -1,7 +1,8 @@
 schema: '2.0'
 stages:
   generate_templates:
-    cmd: python src/generate_templates.py
+    cmd: /home/smayan/Desktop/AI-ML-DS/AI-and-ML-Course/.conda/bin/python 
+      src/generate_templates.py
     deps:
     - path: data/expert_data
       hash: md5
@@ -10,8 +11,8 @@ stages:
       nfiles: 61
     - path: src/features.py
       hash: md5
-      md5: ec2e1b8f18bf8cd98d03423aa75d033e
-      size: 11910
+      md5: b7c9b123ca02e062cd1293de414469f3
+      size: 11976
     - path: src/generate_templates.py
       hash: md5
       md5: c3f55e1f4fac692ac62585295dba202a
@@ -32,8 +33,8 @@ stages:
     outs:
     - path: data/expert_templates.npz
       hash: md5
-      md5: a511c46edfc9704ecf72710a7e3b4c27
-      size: 530918
+      md5: 6bbbac4006c6d819433dbb395ec3aadc
+      size: 575578
   preprocess_pose:
     cmd: python src/preprocess_pose.py
     deps:
@@ -590,17 +591,17 @@ stages:
     deps:
     - path: data/raw
       hash: md5
-      md5: dd42292ebf689687a6aa388b819c1076.dir
-      size: 694730733
-      nfiles: 538
+      md5: 91c67ac2f03ef69d4f15981551aea53d.dir
+      size: 682684167
+      nfiles: 537
     - path: src/features.py
       hash: md5
       md5: b7c9b123ca02e062cd1293de414469f3
       size: 11976
     - path: src/preprocess_hybrid.py
       hash: md5
-      md5: 802e1892ea1d6b7a72cdb76bc930979d
-      size: 11150
+      md5: 059206c44d8919a93c39ab97168a0f95
+      size: 11839
     - path: src/utils.py
       hash: md5
       md5: e17bac27f34ac80ab24582d24b85bd01
@@ -612,92 +613,173 @@ stages:
           - start: 1
             end: 24
             bottom: 0.5
+            top: 0.1
+            left: 0.25
+            right: 0.25
           - start: 24
             end: 42
             bottom: 0.45
+            top: 0.1
+            left: 0.25
+            right: 0.25
           - start: 42
             end: 58
             bottom: 0.4
+            top: 0.1
+            left: 0.25
+            right: 0.25
           - start: 58
             end: 88
             bottom: 0.4
+            top: 0.1
+            left: 0.25
+            right: 0.25
           - start: 88
             end: 100
             bottom: 0.5
+            top: 0.1
+            left: 0.25
+            right: 0.25
           backhand_drive:
           - start: 1
             end: 38
             bottom: 0.45
+            top: 0.1
+            left: 0.25
+            right: 0.25
           - start: 38
             end: 100
             bottom: 0.4
+            top: 0.1
+            left: 0.25
+            right: 0.25
           backhand_net_shot:
           - start: 1
             end: 6
             bottom: 0.5
+            top: 0.1
+            left: 0.25
+            right: 0.25
           - start: 7
             end: 34
             bottom: 0.4
+            top: 0.1
+            left: 0.25
+            right: 0.25
           - start: 35
             end: 44
             bottom: 0.35
+            top: 0.1
+            left: 0.25
+            right: 0.25
           - start: 45
             end: 70
             bottom: 0.45
+            top: 0.1
+            left: 0.25
+            right: 0.25
           - start: 71
             end: 100
             bottom: 0.35
+            top: 0.1
+            left: 0.25
+            right: 0.25
           forehand_clear:
           - start: 1
             end: 27
             bottom: 0.48
+            top: 0.1
+            left: 0.25
+            right: 0.25
           - start: 28
             end: 98
             bottom: 0.4
+            top: 0.1
+            left: 0.25
+            right: 0.25
           - start: 99
             end: 100
             bottom: 0.45
+            top: 0.1
+            left: 0.25
+            right: 0.25
           forehand_lift:
           - start: 1
             end: 25
-            bottom: 0.4
+            bottom: 0.45
+            top: 0.1
+            left: 0.25
+            right: 0.25
           - start: 26
             end: 38
             bottom: 0.45
+            top: 0.1
+            left: 0.25
+            right: 0.25
           - start: 39
             end: 47
             bottom: 0.37
+            top: 0.1
+            left: 0.25
+            right: 0.25
           - start: 48
             end: 59
             bottom: 0.4
+            top: 0.1
+            left: 0.25
+            right: 0.25
           - start: 60
             end: 72
             bottom: 0.45
+            top: 0.1
+            left: 0.25
+            right: 0.25
           - start: 73
             end: 100
             bottom: 0.37
+            top: 0.1
+            left: 0.25
+            right: 0.25
           forehand_net_shot:
           - start: 1
             end: 11
             bottom: 0.5
+            top: 0.1
+            left: 0.25
+            right: 0.25
           - start: 11
             end: 42
             bottom: 0.4
+            top: 0.1
+            left: 0.25
+            right: 0.25
           - start: 43
             end: 51
             bottom: 0.37
+            top: 0.1
+            left: 0.25
+            right: 0.25
           - start: 52
             end: 63
             bottom: 0.4
+            top: 0.1
+            left: 0.25
+            right: 0.25
           - start: 64
             end: 67
             bottom: 0.43
+            top: 0.1
+            left: 0.25
+            right: 0.25
           - start: 68
             end: 100
             bottom: 0.35
+            top: 0.1
+            left: 0.25
+            right: 0.25
         hybrid_pipeline:
           data_path: data/Data_Normalized_Hybrid
-          model_path: models/tcn_hybrid_tuned.h5
+          model_path: models/tcn_hybrid.h5
           sequence_length: 30
           stride: 5
           batch_size: 8
@@ -737,34 +819,31 @@ stages:
           min_detection_confidence: 0.3
           min_tracking_confidence: 0.3
         segment_rules:
-          default_seconds: 1.75
-          tail_seconds: 2.0
-          tail_shots:
-          - forehand_clear
-          middle_shots:
-            forehand_lift: 2.0
+          default_seconds: 2.0
+          max_windows_per_video: 3
     outs:
     - path: data/Data_Normalized_Hybrid
       hash: md5
-      md5: 79bbc35cd7f3a282d46d523aa48e68d8.dir
-      size: 42296982
-      nfiles: 1313
+      md5: a5d492425cd36473242602223d0f6a23.dir
+      size: 44648604
+      nfiles: 1386
   evaluate_production:
-    cmd: python src/evaluate.py --type hybrid --model models/tcn_hybrid_tuned.h5
+    cmd: /home/smayan/Desktop/AI-ML-DS/AI-and-ML-Course/.conda/bin/python 
+      src/evaluate.py --type hybrid --model models/tcn_hybrid_tuned.h5
     deps:
     - path: data/Data_Normalized_Hybrid
       hash: md5
-      md5: 76a18890a8f1f6d9c87bbf8b4b7c7692.dir
-      size: 42296982
-      nfiles: 1313
+      md5: a5d492425cd36473242602223d0f6a23.dir
+      size: 44648604
+      nfiles: 1386
     - path: data/expert_templates.npz
       hash: md5
-      md5: a511c46edfc9704ecf72710a7e3b4c27
-      size: 530918
+      md5: 6bbbac4006c6d819433dbb395ec3aadc
+      size: 575578
     - path: models/tcn_hybrid_tuned.h5
       hash: md5
-      md5: 8d7693e24aab1580ac2247077951b6f7
-      size: 3355696
+      md5: 58112dfded87c43588582a2adfc4a6f6
+      size: 1634992
     - path: src/evaluate.py
       hash: md5
       md5: 93f50a06d01d2874e2bc4ba49c3f3690
