@@ -5,6 +5,7 @@ data/rsn_frames
 mlruns/
 dvclive/
 .vscode/
+Images/
 
 # Python bytecode / caches
 __pycache__/
