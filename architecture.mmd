@@ -1,0 +1,53 @@
+graph TD
+    Developer[Developer / GitHub PR]
+    Filesystem[Local Codebase src/]
+
+    CLI[Dev Guardian CLI]
+    ASTParser[Tree-sitter AST Parser]
+
+    Hybrid[Hybrid Retriever Layer]
+    Memgraph[(Memgraph Cypher DB)]
+    Qdrant[(Qdrant Vector DB)]
+
+    Groq[Groq Llama-3.3-70B]
+    Langfuse[Langfuse LLMOps]
+    
+    Supervisor{Supervisor Node}
+    Gatekeeper[Gatekeeper Agent]
+    RedTeam[Red Team Tester]
+    Debate[Debate Mechanism]
+    Remediation[Remediation Specialist]
+
+    MCP[Anthropic MCP Server]
+
+    Developer -->|astro_pr.diff| CLI
+    Filesystem -->|Source Files| ASTParser
+
+    CLI -->|guardian index| ASTParser
+    ASTParser -->|AST Nodes & Metadata| Hybrid
+    Hybrid -->|MERGE| Memgraph
+    Hybrid -->|Vectors| Qdrant
+
+    CLI -->|guardian evaluate| Hybrid
+    Hybrid -->|Context Retrieval| Supervisor
+
+    Supervisor -.->|Parallel Execution| Gatekeeper
+    Supervisor -.->|Parallel Execution| RedTeam
+
+    Gatekeeper <-->|API Calls| Groq
+    RedTeam <-->|API Calls| Groq
+    Groq -.->|Tracing| Langfuse
+
+    Gatekeeper -->|PASS / WARN / FAIL| Supervisor
+    RedTeam -->|PASS / WARN / FAIL| Supervisor
+
+    Supervisor -->|Agreement: PASS| End((Accept PR))
+    
+    Supervisor -->|Disagreement| Debate
+    Debate -->|Consensus: REJECT| End2((Reject PR))
+    Debate -->|Consensus: REMEDIATE| Remediation
+
+    Supervisor -->|Agreement: FAIL or WARN| Remediation
+    Remediation -->|Writes Fixing Diff| End3((Autonomous PR Fix))
+
+    End3 -.->|Pushed via IDE| MCP

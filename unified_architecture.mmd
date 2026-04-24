@@ -1,0 +1,43 @@
+graph TD
+    %% Styling
+    classDef io fill:#e0f7fa,stroke:#006064,stroke-width:2px,color:#000
+    classDef extract fill:#fff9c4,stroke:#fbc02d,stroke-width:2px,color:#000
+    classDef model fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#000
+    classDef coach fill:#ffebee,stroke:#b71c1c,stroke-width:2px,color:#000
+
+    %% High-Level Flow
+    Video[Raw Badminton Video]:::io
+    
+    subgraph Preprocessing [1. Preprocessing Pipeline]
+        Vision[Custom RSN\nResidual-Shuffle Network\nVisual Features]:::extract
+        Pose[MediaPipe\n3D Skeleton Posture]:::extract
+    end
+
+    subgraph Classification [2. Hybrid Classification Model]
+        VisualStream[Visual TCN + Attention]:::model
+        PoseStream[Pose Conv1D + Attention]:::model
+        Fusion[Late Fusion & Classification]:::model
+        Predict[Stroke Prediction\nSmash, Clear, Drop, etc.]:::io
+    end
+
+    subgraph Coaching [3. Coaching Engine KSI]
+        ExpertDB[(Expert Database)]:::io
+        DTW[Dynamic Time Warping\nAlignment]:::coach
+        Score[Kinematic Similarity Index\nKSI Scoring]:::coach
+        Feedback[Personalized Coaching\nFeedback & Corrections]:::io
+    end
+
+    %% Connections
+    Video --> Vision & Pose
+    
+    Vision --> VisualStream
+    Pose --> PoseStream
+    
+    VisualStream --> Fusion
+    PoseStream --> Fusion
+    Fusion --> Predict
+
+    Pose --> DTW
+    ExpertDB --> DTW
+    DTW --> Score
+    Score --> Feedback

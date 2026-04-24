@@ -1,0 +1,36 @@
+To the Editorial Board and Reviewers,
+Multimedia Tools and Applications
+
+Re: Submission MTAP-D-26-01262R1
+Title: Smashifix: An Application for Badminton Posture Correction Using Deep Learning
+
+Dear Editor and Reviewers,
+
+We would like to thank the Editorial Board and the Reviewers for their time, constructive feedback, and the opportunity to submit a revised version of our manuscript. We have carefully addressed the administrative and technical requirements outlined in your previous correspondence.
+
+Below is a point-by-point response detailing the changes made in this revision:
+
+1. This is the original and correct author list, no changes will be made furthur, it is absolutely final. 
+
+2. Replace personal email addresses with institutional ones.
+Response: We politely request to retain our personal email addresses (@gmail.com) for the corresponding author and co-authors. All the authors are currently undergraduate students who will be graduating and leaving the institution in 2027. Retaining our personal email addresses ensures that readers and researchers can reliably contact us regarding this work in the long term, long after our institutional email access has been revoked. We hope the editorial board understands and permits this exception.
+
+3. Review and limit citations of papers previously published in Multimedia Tools and Applications to a maximum of three.
+Response: We have carefully reviewed our bibliography and ensured that citations to papers previously published in Multimedia Tools and Applications are strictly limited to a maximum of three, in full compliance with the journal’s guidelines.
+
+4. Ensure all author data is complete and accurate to facilitate the journal's revision process.
+Response: We have verified that all author data, including affiliations, names, and contact details, is completely accurate in both the manuscript and the Editorial Manager submission system.
+
+(Optional: If the editor or reviewers had any other specific technical comments about the paper itself, e.g., fixing figure overlaps, you can add them below like this:)
+
+5. Figure Formatting and Quality
+Response: We have also updated the formatting of our figures (e.g., the loss convergence plots) to resolve text overlap issues and ensure high-resolution clarity for final publication. We have also resolved the LaTeX compilation issues that were previously preventing the system from building the manuscript PDF correctly.
+
+We hope these revisions meet the journal's strict standards. We are confident that the manuscript is now ready for the next stage of the review process.
+
+Sincerely,
+
+Smayan Kulkarni
+(On behalf of all co-authors)
+Dwarkadas J Sanghvi College of Engineering
+Mumbai, Maharashtra, India

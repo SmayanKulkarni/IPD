@@ -1,0 +1,56 @@
+graph LR
+    %% Styling
+    classDef input fill:#e1f5fe,stroke:#01579b,stroke-width:2px,color:#000
+    classDef tcn fill:#fff9c4,stroke:#fbc02d,stroke-width:2px,color:#000
+    classDef conv1d fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#000
+    classDef attn fill:#f3e5f5,stroke:#4a148c,stroke-width:2px,color:#000
+    classDef gru fill:#e8eaf6,stroke:#283593,stroke-width:2px,color:#000
+    classDef dense fill:#ffebee,stroke:#b71c1c,stroke-width:2px,color:#000
+    classDef output fill:#ffe082,stroke:#f57f17,stroke-width:2px,color:#000
+
+    %% Inputs
+    VisIn["Visual Feature Sequence\nShape: (T, 64)"]:::input
+    PoseIn["Pose Landmark Sequence\nShape: (T, 99)"]:::input
+
+    %% Visual Stream (TCN Backbone)
+    subgraph Visual Stream [Visual TCN Backbone]
+        TCN_L1("TCN Block\nDilation=1\nCausal Conv"):::tcn
+        TCN_L2("TCN Block\nDilation=2\nCausal Conv"):::tcn
+        TCN_L3("TCN Block\nDilation=4\nCausal Conv"):::tcn
+        TCN_L4("TCN Block\nDilation=8\nCausal Conv"):::tcn
+        
+        VisAttn("Multi-Head Self-Attention\n(8 Heads)"):::attn
+        VisGRU("GRU Cell Layer\n(Sequence Summarizer)"):::gru
+    end
+
+    %% Pose Stream (Conv1D Backbone)
+    subgraph Pose Stream [Pose Sequence Backbone]
+        Conv("Conv1D Layer\nKernel=3"):::conv1d
+        PoseAttn("Multi-Head Self-Attention\n(8 Heads)"):::attn
+        PoseGRU("GRU Cell Layer\n(Sequence Summarizer)"):::gru
+    end
+
+    %% Late Fusion
+    subgraph Classifier [Late Fusion Head Classifier]
+        Concat("Concatenate Nodes\nShape: 163D Tensor"):::dense
+        FC1("Dense Fully Connected\nActivation=ReLU"):::dense
+        Dropout("Dropout/L2 Reg\nRatio=0.5"):::dense
+        FC2("Dense Head\nActivation=Softmax"):::dense
+    end
+    
+    Out((6 Probability\nStroke Classes)):::output
+
+    %% Link Flow (Visual)
+    VisIn --> TCN_L1 --> TCN_L2 --> TCN_L3 --> TCN_L4
+    TCN_L4 --> VisAttn
+    VisAttn -->|Attention Weights| VisGRU
+
+    %% Link Flow (Pose)
+    PoseIn --> Conv --> PoseAttn
+    PoseAttn -->|Attention Weights| PoseGRU
+
+    %% Link Flow (Fusion)
+    VisGRU -->|Encoded Visual State| Concat
+    PoseGRU -->|Encoded Pose State| Concat
+
+    Concat --> FC1 --> Dropout --> FC2 --> Out
